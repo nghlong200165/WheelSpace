@@ -15,6 +15,7 @@ const productSchema = new Schema(
     images: { type: [String], default: [] },
     isVisible: { type: Boolean, default: true },
     isNewArrival: { type: Boolean, default: false },
+    isFeatured: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

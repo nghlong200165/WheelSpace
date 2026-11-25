@@ -8,6 +8,7 @@ import { env } from "@/server/env";
 import { Order } from "@/server/models/Order";
 import { Product } from "@/server/models/Product";
 import { SETTINGS_KEY, Settings } from "@/server/models/Settings";
+import { User } from "@/server/models/User";
 import { productInputSchema, type ProductInput } from "@/lib/schemas/product";
 import { DEFAULT_SETTINGS } from "@/lib/schemas/settings";
 
@@ -44,7 +45,8 @@ async function main() {
   console.log(`Connected to ${mongoose.connection.name}`);
 
   // Creates the collections and the indexes declared in the schemas.
-  await Promise.all([Product.syncIndexes(), Order.syncIndexes(), Settings.syncIndexes()]);
+  // syncIndexes also drops indexes that no longer match the schema.
+  await Promise.all([Product.syncIndexes(), Order.syncIndexes(), Settings.syncIndexes(), User.syncIndexes()]);
 
   if (reset) {
     const [products, orders] = await Promise.all([Product.deleteMany({}), Order.deleteMany({})]);

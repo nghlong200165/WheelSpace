@@ -2,14 +2,8 @@ import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { env } from "../env";
+import { sessionSecret } from "../env";
 import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, createSessionToken, verifySessionToken } from "./token";
-
-function sessionSecret(): string {
-  const secret = env().SESSION_SECRET;
-  if (!secret) throw new Error("SESSION_SECRET is not configured");
-  return secret;
-}
 
 export async function startAdminSession(): Promise<void> {
   (await cookies()).set(SESSION_COOKIE, createSessionToken(sessionSecret()), {

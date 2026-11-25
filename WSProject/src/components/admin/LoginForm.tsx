@@ -4,7 +4,7 @@ import { startTransition, useActionState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { loginAction } from "@/server/actions/auth";
 import { INITIAL_FORM_STATE } from "@/lib/form-state";
-import { FormMessage, TextField, buttonPrimary } from "./fields";
+import { FormMessage, TextField, buttonPrimary } from "@/components/ui/fields";
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(loginAction, INITIAL_FORM_STATE);

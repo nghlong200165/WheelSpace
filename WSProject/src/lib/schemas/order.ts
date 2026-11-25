@@ -29,7 +29,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 };
 
 // Vietnamese mobile numbers: 10 digits starting with 0, or +84 followed by 9 digits.
-const phoneSchema = z
+export const phoneSchema = z
   .string()
   .trim()
   .regex(/^(0|\+84)\d{9}$/, "Số điện thoại không hợp lệ");

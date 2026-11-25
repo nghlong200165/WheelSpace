@@ -33,6 +33,7 @@ export async function saveProductAction(_prev: FormState, formData: FormData): P
     images: keptImages(formData),
     isVisible: checkbox(formData, "isVisible"),
     isNewArrival: checkbox(formData, "isNewArrival"),
+    isFeatured: checkbox(formData, "isFeatured"),
   });
   if (!parsed.success) return invalidForm(parsed.error);
 

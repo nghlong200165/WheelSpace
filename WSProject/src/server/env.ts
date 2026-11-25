@@ -6,6 +6,14 @@ const envSchema = z.object({
   ADMIN_EMAIL: z.email().optional(),
   ADMIN_PASSWORD: z.string().min(8).optional(),
   SESSION_SECRET: z.string().min(32).optional(),
+  // Public base URL of the site, used to build the Google OAuth redirect URI.
+  APP_URL: z.url().default("http://localhost:3000"),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  // Third-party providers (see src/server/integrations/README.md and docs/THIRD_PARTY_SERVICES.md).
+  STORAGE_PROVIDER: z.enum(["local"]).default("local"),
+  EMAIL_PROVIDER: z.enum(["console"]).default("console"),
+  SMS_PROVIDER: z.enum(["console"]).default("console"),
   PAYMENT_PROVIDER: z.enum(["mock", "payos"]).default("mock"),
   PAYOS_CLIENT_ID: z.string().optional(),
   PAYOS_API_KEY: z.string().optional(),
@@ -26,4 +34,11 @@ export function env(): Env {
     cached = parsed.data;
   }
   return cached;
+}
+
+// Secret for signing session cookies; required by admin and customer login.
+export function sessionSecret(): string {
+  const secret = env().SESSION_SECRET;
+  if (!secret) throw new Error("SESSION_SECRET is not configured");
+  return secret;
 }

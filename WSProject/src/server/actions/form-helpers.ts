@@ -29,7 +29,10 @@ export function invalidForm(error: z.ZodError): FormState {
 
 export function failedForm(err: unknown): FormState {
   if (err instanceof ServiceError) {
-    return { message: err.message, fieldErrors: err.field ? { [err.field]: err.message } : undefined };
+    // Field errors are shown next to the field; the banner then only points to it.
+    return err.field
+      ? { message: "Vui lòng kiểm tra lại các trường được đánh dấu.", fieldErrors: { [err.field]: err.message } }
+      : { message: err.message };
   }
   console.error(err);
   return { message: "Có lỗi xảy ra, vui lòng thử lại." };

@@ -33,6 +33,8 @@ export const productInputSchema = z.object({
   images: z.array(z.string()).max(MAX_PRODUCT_IMAGES, `Tối đa ${MAX_PRODUCT_IMAGES} ảnh`).default([]),
   isVisible: z.boolean().default(true),
   isNewArrival: z.boolean().default(false),
+  // Shown in the home page hero slider (needs at least one image).
+  isFeatured: z.boolean().default(false),
 });
 
 export type ProductInput = z.infer<typeof productInputSchema>;

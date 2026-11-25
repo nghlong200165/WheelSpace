@@ -22,7 +22,7 @@ import {
   TextField,
   buttonPrimary,
   buttonSecondary,
-} from "./fields";
+} from "@/components/ui/fields";
 
 const MAX_IMAGE_MB = 8;
 
@@ -216,6 +216,11 @@ export function ProductForm({ product }: { product?: ProductDTO }) {
           <h2 className="text-xs font-medium tracking-eyebrow">HIỂN THỊ</h2>
           <CheckboxField label="Hiện trên cửa hàng" name="isVisible" defaultChecked={product?.isVisible ?? true} />
           <CheckboxField label='Hiện ở mục "Mới về"' name="isNewArrival" defaultChecked={product?.isNewArrival ?? false} />
+          <CheckboxField label="Hiện trên banner trang chủ" name="isFeatured" defaultChecked={product?.isFeatured ?? false} />
+          <p className="text-xs leading-relaxed text-muted">
+            Banner dùng ảnh đại diện (ảnh đầu tiên) và chỉ hiện khi sản phẩm có ảnh. Chưa tick mẫu nào thì banner tự lấy các mẫu
+            &quot;Mới về&quot;.
+          </p>
           <p className="text-xs leading-relaxed text-muted">
             Khi tồn kho về 0, trang sản phẩm tự đổi nút &quot;Mua&quot; thành &quot;Nhắn tin để order&quot;.
           </p>

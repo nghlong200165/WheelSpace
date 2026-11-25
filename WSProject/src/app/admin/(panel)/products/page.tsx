@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { buttonPrimary, buttonSecondary } from "@/components/admin/fields";
+import { buttonPrimary, buttonSecondary } from "@/components/ui/fields";
 import { requireAdmin } from "@/server/auth/session";
 import { getProductStats, listProductsForAdmin } from "@/server/services/products";
 import { formatVnd } from "@/lib/format";

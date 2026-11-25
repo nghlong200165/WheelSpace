@@ -2,8 +2,8 @@ import "server-only";
 import { isValidObjectId, mongo, type Types } from "mongoose";
 import { connectDb } from "../db";
 import { Product, type ProductDoc } from "../models/Product";
+import { storage } from "../integrations/storage";
 import { ServiceError } from "./errors";
-import { deleteImages, saveProductImage } from "./storage";
 import {
   MAX_PRODUCT_IMAGES,
   type Condition,
@@ -28,6 +28,7 @@ function toDTO(doc: LeanProduct): ProductDTO {
     images: [...(doc.images ?? [])],
     isVisible: doc.isVisible ?? true,
     isNewArrival: doc.isNewArrival ?? false,
+    isFeatured: doc.isFeatured ?? false,
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   };
@@ -44,12 +45,16 @@ function isDuplicateKeyError(err: unknown): boolean {
 async function uploadAll(files: File[]): Promise<string[]> {
   const urls: string[] = [];
   try {
-    for (const file of files) urls.push(await saveProductImage(file));
+    for (const file of files) urls.push(await storage().saveImage(file, "products"));
     return urls;
   } catch (err) {
     await deleteImages(urls);
     throw err;
   }
+}
+
+function deleteImages(urls: string[]): Promise<void> {
+  return storage().deleteImages(urls);
 }
 
 export type AdminProductFilter = { q?: string; rarity?: Rarity; condition?: Condition };
@@ -66,6 +71,57 @@ export async function listProductsForAdmin(filter: AdminProductFilter = {}): Pro
 
   const docs = await Product.find(query).sort({ createdAt: -1 }).lean<LeanProduct[]>();
   return docs.map(toDTO);
+}
+
+// Storefront: products flagged "Mới về"; falls back to the latest visible products if none are flagged.
+export async function listNewArrivals(limit: number): Promise<ProductDTO[]> {
+  await connectDb();
+  let docs = await Product.find({ isVisible: true, isNewArrival: true })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean<LeanProduct[]>();
+  if (docs.length === 0) {
+    docs = await Product.find({ isVisible: true }).sort({ createdAt: -1 }).limit(limit).lean<LeanProduct[]>();
+  }
+  return docs.map(toDTO);
+}
+
+// Storefront hero slider: products ticked "Hiện trên banner"; falls back to new arrivals.
+// Only visible products that have at least one image.
+export async function listBannerProducts(limit: number): Promise<ProductDTO[]> {
+  await connectDb();
+  const withImage = { isVisible: true, "images.0": { $exists: true } };
+  let docs = await Product.find({ ...withImage, isFeatured: true })
+    .sort({ updatedAt: -1 })
+    .limit(limit)
+    .lean<LeanProduct[]>();
+  if (docs.length === 0) {
+    docs = await Product.find({ ...withImage, isNewArrival: true }).sort({ createdAt: -1 }).limit(limit).lean<LeanProduct[]>();
+  }
+  return docs.map(toDTO);
+}
+
+// Storefront: visible Chase / Limited products, in stock first.
+export async function listRareProducts(limit: number): Promise<ProductDTO[]> {
+  await connectDb();
+  const docs = await Product.find({ isVisible: true, rarity: { $in: ["chase", "limited"] } })
+    .sort({ stock: -1, createdAt: -1 })
+    .limit(limit)
+    .lean<LeanProduct[]>();
+  return docs.map(toDTO);
+}
+
+// Storefront: visible products for the given ids, in the same order (e.g. a wishlist).
+export async function listVisibleProductsByIds(ids: string[]): Promise<ProductDTO[]> {
+  const valid = ids.filter((id) => isValidObjectId(id));
+  if (valid.length === 0) return [];
+  await connectDb();
+  const docs = await Product.find({ _id: { $in: valid }, isVisible: true }).lean<LeanProduct[]>();
+  const byId = new Map(docs.map((d) => [d._id.toString(), d]));
+  return valid.flatMap((id) => {
+    const doc = byId.get(id);
+    return doc ? [toDTO(doc)] : [];
+  });
 }
 
 export async function getProductStats(): Promise<{ total: number; outOfStock: number; hidden: number }> {
@@ -120,7 +176,7 @@ export async function updateProduct(id: string, input: ProductInput, newImages: 
     const doc = await Product.findByIdAndUpdate(
       id,
       { ...input, images: [...kept, ...uploaded] },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     ).lean<LeanProduct>();
     if (!doc) throw new ServiceError("Không tìm thấy sản phẩm");
     await deleteImages(existing.images.filter((url) => !kept.includes(url)));

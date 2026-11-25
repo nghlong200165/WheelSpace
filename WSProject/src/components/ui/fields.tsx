@@ -1,6 +1,6 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
-// Shared form controls for the admin, styled after the wireframe.
+// Shared form controls (admin + account forms), styled after the wireframe.
 
 const control =
   "w-full border border-line bg-surface px-3.5 text-sm text-ink outline-none transition-colors focus:border-ink aria-invalid:border-accent";

@@ -50,16 +50,25 @@ WheelSpace/                    # Gốc repo git
     │   │   ├── admin/(panel)/ #   trang admin có sidebar: products, settings, orders
     │   │   ├── api/health/    #   kiểm tra DB
     │   │   └── uploads/       #   phục vụ ảnh sản phẩm từ thư mục uploads/
-    │   ├── components/admin/  # FE: form + field admin
+    │   ├── app/(shop)/        #   cửa hàng: layout (header/footer/nút Messenger), trang chủ, login, register, account
+    │   ├── app/admin/(panel)/customers/ # admin: danh sách khách + đặt lại mật khẩu
+    │   ├── app/auth/google/   #   OAuth Google: bắt đầu (route.ts) + callback
+    │   ├── components/admin/  # FE: form admin
+    │   ├── components/shop/   # FE: SiteHeader, AccountLink, SiteFooter, ProductCard, WishlistButton, AddressForm…
+    │   ├── components/ui/     # FE: field/form dùng chung (fields.tsx)
     │   ├── lib/               # Dùng chung FE/BE: format, form-state, schemas/ (Zod + DTO type)
-    │   ├── proxy.ts           # Chặn /admin/* khi chưa có cookie hợp lệ (kiểm tra sơ bộ)
+    │   ├── proxy.ts           # Chặn /admin/* và /account/* khi chưa có cookie hợp lệ (kiểm tra sơ bộ, trả 307)
     │   └── server/            # BE (server-only)
-    │       ├── auth/          #   token.ts (ký HMAC, dùng cả trong proxy), session.ts (requireAdmin)
-    │       ├── actions/       #   Server Actions: auth, products, settings
-    │       ├── services/      #   products, settings, storage, auth, health
-    │       ├── models/        #   Product, Order, Settings
+    │       ├── auth/          #   token.ts (ký HMAC, dùng cả trong proxy), session.ts (admin),
+    │       │                  #   customer-session.ts (khách), google.ts (config + safeNextPath)
+    │       ├── actions/       #   Server Actions: auth (admin), account (khách), customers (admin), products, settings
+    │       ├── services/      #   products, settings, users, password, rate-limit, auth, health
+    │       ├── integrations/  #   dịch vụ bên thứ 3: storage (local), email/sms (console), payment (types), google (oauth)
+    │       ├── queries/       #   storefront.ts: đọc dữ liệu cửa hàng có cache
+    │       ├── models/        #   Product, Order, Settings, User
     │       └── env.ts, db.ts, cache-tags.ts
-    ├── scripts/seed.ts        # Seed dữ liệu mẫu (npm run db:seed)
+    ├── scripts/               # seed.ts, check-google-oauth.ts, check-accounts.ts
+    ├── docs/THIRD_PARTY_SERVICES.md # Danh sách dịch vụ bên thứ 3 + chi phí + việc để sau
     ├── docker-compose.yml     # MongoDB local
     ├── .env.example           # Mẫu biến môi trường (copy thành .env.local)
     ├── CLAUDE.md, ONBOARDING.md, AGENTS.md
@@ -75,6 +84,8 @@ npm run db:seed        # Tạo collection/index + cài đặt mặc định + 10
 npm run db:seed -- --reset  # Xóa products + orders rồi seed lại (chỉ cho phép DB localhost)
 npm run dev            # Dev server: http://localhost:3000, kiểm tra DB: /api/health
 npm run typecheck      # Kiểm tra type
+npm run check:oauth    # Kiểm tra luồng trao đổi Google OAuth (giả lập Google, không cần mạng)
+npm run check:accounts # Kiểm tra quy tắc tài khoản trên DB local (đăng ký, khóa, gộp Google); tự dọn dữ liệu test
 npm run lint           # ESLint
 npm run build          # Build production (tắt dev server trước, xem lưu ý mục 2)
 npm run db:down        # Tắt MongoDB
@@ -89,6 +100,18 @@ npm run db:down        # Tắt MongoDB
 - [2026-11-25] Dùng MongoDB (Atlas) + Mongoose theo lựa chọn của chủ dự án. Khi đặt hàng, trừ kho bằng update atomic có điều kiện (`stock >= qty`) để chống bán lố.
 - [2026-11-25] Phạm vi demo: sản phẩm gồm mã MGT, tên, giá, ảnh, độ hiếm (Thường/Chase/Limited), tình trạng (New/Lướt/Used), tồn kho. Thanh toán COD + payOS. Phí ship do admin cấu hình. Hàng order không xử lý trên web, chỉ có nút chat Messenger (link FB đang để placeholder). Chưa làm mã giảm giá, đổi trả, phân quyền.
 - [2026-11-25] Cho phép guest checkout: khách tra cứu đơn bằng mã đơn + SĐT. Đăng nhập là tùy chọn, dùng cho wishlist và lịch sử đơn.
+- [2026-11-25] Đăng nhập khách gồm 2 cách:
+  - **SĐT/email + mật khẩu.** Trang `/login` có 2 bước: nhập SĐT/email trước, đã có tài khoản thì hỏi mật khẩu, chưa có thì sang `/register` với giá trị điền sẵn.
+  - **Google.** Luồng OAuth (PKCE + state) tự viết trong `services/google-oauth.ts` và `app/auth/google/`, không dùng thư viện.
+- [2026-11-25] Quy tắc tài khoản khách:
+  - Đăng ký gồm họ tên + SĐT (bắt buộc) + mật khẩu (≥ 8 ký tự), email không bắt buộc. Chưa có OTP nên SĐT/email chưa xác minh.
+  - Mật khẩu băm bằng scrypt (`services/password.ts`). Sai 5 lần thì khóa 15 phút (lưu trong DB). Ngoài ra có giới hạn số request theo IP (in-memory).
+  - Google gộp vào tài khoản có cùng email. Nếu email đó chưa xác minh và tài khoản có mật khẩu thì **xóa mật khẩu và tăng `sessionVersion`**, để chặn trường hợp kẻ xấu đăng ký trước bằng email của người khác.
+  - Cookie `ws_session` chứa `uid` + `sv` (sessionVersion). Đổi hoặc đặt lại mật khẩu thì tăng `sv`, mọi phiên cũ bị đăng xuất.
+  - Quên mật khẩu: khách nhắn Messenger, admin vào `/admin/customers` để đặt lại và nhận mật khẩu tạm (chỉ hiện 1 lần).
+  - Khách đăng nhập có thêm lịch sử đơn, địa chỉ lưu sẵn, wishlist. "Báo khi có hàng" chưa làm vì cần dịch vụ gửi email.
+  - Bước tra SĐT/email cho người khác biết số đó đã có tài khoản hay chưa. Đây là đánh đổi của kiểu đăng nhập 2 bước, đã giới hạn số lần tra theo IP.
+- [2026-11-25] Giỏ hàng lưu ở localStorage (phương án A), không đồng bộ server. Khi đặt hàng, server tính lại giá + phí ship và trừ kho atomic. Không giữ hàng khi còn nằm trong giỏ.
 - [2026-11-25] Không viết code khi chủ dự án chưa confirm. Luôn đề xuất trước rồi hỏi.
 - [2026-11-25] FE và BE chung một project, không tách 2 folder. Để sau này tách được, luôn giữ các quy tắc sau:
   1. Logic nghiệp vụ chỉ nằm trong `src/server/services/`, viết bằng hàm TypeScript thuần, không phụ thuộc Next.js.
@@ -97,6 +120,14 @@ npm run db:down        # Tắt MongoDB
   4. Service trả DTO (object thuần), không trả document Mongoose.
   5. Mọi file trong `src/server/` có `import "server-only"`. Có 2 ngoại lệ: file `"use server"` trong `actions/`, và `auth/token.ts` vì proxy cũng import file này.
   6. Mọi trang admin và Server Action admin đều gọi `requireAdmin()`. Proxy chỉ là lớp chặn sơ bộ.
+  7. Cửa hàng đọc dữ liệu qua `src/server/queries/storefront.ts`. Đây là lớp cache riêng của Next (`'use cache'` + `cacheTag` + `cacheLife('hours')`), bọc các service. Service vẫn giữ thuần, không phụ thuộc Next. Chỉ trả sản phẩm `isVisible`.
+  8. **Dịch vụ bên thứ 3 chỉ nằm trong `src/server/integrations/<loại>/`**, gồm `types.ts` (chuẩn chung), mỗi nhà cung cấp 1 file, và `index.ts` chọn nhà cung cấp theo `<LOẠI>_PROVIDER`. Code nghiệp vụ chỉ import `integrations/<loại>`. Luôn có nhà cung cấp free cho dev (`local`/`console`/`mock`). Cách thêm: `src/server/integrations/README.md`.
+- [2026-11-25] Hero trang chủ là slider (`components/shop/HeroSlider.tsx`):
+  - Ảnh lấy từ sản phẩm có tick "Hiện trên banner trang chủ" (`isFeatured`), tối đa 6. Không tick mẫu nào thì lấy sản phẩm "Mới về" có ảnh. Chỉ lấy sản phẩm đang hiện và có ảnh.
+  - Bấm vào ảnh thì sang `/products`.
+  - Tự chuyển mỗi 5 giây, dừng khi hover/focus/chạm, không tự chạy khi máy bật giảm chuyển động. Có nút ‹ ›, chấm vị trí, vuốt, phím mũi tên.
+- [2026-11-25] **Dịch vụ bên thứ 3 tốn phí thì để làm sau.** Chỉ ghi vào `docs/THIRD_PARTY_SERVICES.md`, không tích hợp khi chủ dự án chưa đồng ý. Thêm hoặc đổi dịch vụ nào cũng phải cập nhật file đó.
+- [2026-11-25] Trang chủ được prerender khi build, nên **lúc build phải có MongoDB chạy** (cả trên Vercel: cần `MONGODB_URI` lúc build).
 - [2026-11-25] Admin không dùng Auth.js: chỉ có 1 admin, email/mật khẩu đặt trong env, cookie phiên ký HMAC-SHA256 có hạn 7 ngày. Trang admin đặt `instant = false` (chấp nhận điều hướng chờ server).
 - [2026-11-25] Ảnh sản phẩm: tối đa 10 ảnh, mỗi ảnh ≤ 8MB, chỉ nhận JPG/PNG/WEBP, tên file là UUID. Ảnh đầu tiên là ảnh đại diện. Sửa hoặc xóa sản phẩm thì xóa luôn file ảnh không còn dùng.
 - [2026-11-25] Link Messenger chỉ chấp nhận http/https (giá trị này được render thành href, chặn `javascript:`).
@@ -111,7 +142,12 @@ npm run db:down        # Tắt MongoDB
 |---|---|
 | `MONGODB_URI` | Chuỗi kết nối MongoDB |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Tài khoản admin duy nhất |
-| `SESSION_SECRET` | Khóa ký cookie phiên admin (≥ 32 ký tự) |
+| `SESSION_SECRET` | Khóa ký cookie phiên admin, khách và cookie OAuth state (≥ 32 ký tự) |
+| `APP_URL` | URL gốc của web, dùng tạo redirect URI cho Google (`<APP_URL>/auth/google/callback`) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | OAuth client của Google. Để trống thì nút đăng nhập Google bị tắt |
+| `STORAGE_PROVIDER` | Nơi lưu ảnh: `local` (hiện có). Sau thêm `cloudinary` |
+| `EMAIL_PROVIDER` | Gửi email: `console` (in ra log). Sau thêm `resend` |
+| `SMS_PROVIDER` | Gửi SMS: `console` (in ra log). Sau thêm nhà cung cấp SMS/Zalo ZNS |
 | `PAYMENT_PROVIDER` | `mock` (giả lập) hoặc `payos` |
 | `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY` | Key payOS (khi dùng `payos`) |
 
@@ -123,18 +159,25 @@ Env được validate trong `src/server/env.ts`. Thêm biến mới thì cập n
 
 > Cập nhật mục này cuối mỗi phiên. Đây là phần quan trọng nhất khi đổi tài khoản.
 
-- **Đang làm:** Xong phần 2 (Admin), chờ chủ dự án review. Wireframe: https://claude.ai/artifact/R7DLqD6UVgxFdshyNYvB2w
-- **Việc tiếp theo** (mỗi phần làm xong phải chờ review):
-  1. Phần 3: Cửa hàng gồm trang chủ, danh sách, chi tiết, giỏ hàng. Đọc dữ liệu bằng `'use cache'` + `cacheTag(CACHE_TAGS.products)`, vì các action admin đã gọi `updateTag`.
-  2. Phần 4: Đặt hàng gồm checkout, trừ kho, COD, payOS mock, tra cứu đơn, quản lý đơn (trang `/admin/orders` đang là placeholder).
-- **Còn nợ:** chưa giới hạn số lần đăng nhập sai (brute-force); ảnh đang lưu đĩa local nên chưa deploy Vercel được.
-- **Git:** `main` chỉ có README. Phần 1 và seed đã ở trên `dev` (đã push). Phần 2 chưa commit.
+- **Đang làm:** Phần 3 làm từng trang theo yêu cầu chủ dự án. Đã xong **trang chủ**, **đăng nhập (SĐT/email + mật khẩu, Google), đăng ký, /account, admin Khách hàng**, chờ review. Chủ dự án cần tạo Google OAuth client để thử đăng nhập thật. Wireframe: https://claude.ai/artifact/R7DLqD6UVgxFdshyNYvB2w
+- **Việc tiếp theo** (mỗi trang làm xong phải chờ review):
+  1. Trang danh sách `/products`: lọc `rarity` (giá trị `rare` = Chase + Limited, header và trang chủ đang link tới), tình trạng, còn hàng, tìm kiếm, sắp xếp, phân trang.
+  2. Trang chi tiết `/products/[id]`: gắn `WishlistButton` (đã có sẵn).
+  3. Giỏ hàng `/cart`.
+  4. Phần 4: checkout, trừ kho, COD, payOS mock, tra cứu đơn `/order-lookup`, quản lý đơn (trang `/admin/orders` đang là placeholder).
+- **Còn nợ:** chưa giới hạn số lần đăng nhập sai của **admin** (khách đã có khóa 5 lần sai). Ảnh đang lưu đĩa local nên chưa deploy Vercel được (cần Cloudinary). Các dịch vụ tốn phí xem `docs/THIRD_PARTY_SERVICES.md`.
+- **Git:** `main` chỉ có README. Mọi phần đã làm (khung, admin, trang chủ + slider, đăng nhập/đăng ký, integrations) đã ở trên `dev` và đã push. Chờ chủ dự án test rồi mới merge vào `main`. Thư mục `WheelSpace/Image/` (ảnh thử) cố ý không commit.
 - **Vấn đề / blocker:** (không có)
 
 ## 8. Nhật ký phiên
 
 <!-- Mới nhất ở trên. Mỗi phiên 2–4 dòng: đã làm gì, còn dở gì. -->
 
+- **2026-11-25:** Slider ảnh xe ở hero trang chủ, thêm trường `isFeatured` cho sản phẩm. Header trên điện thoại chỉ hiện biểu tượng cho tài khoản/giỏ hàng. E2E slider 17/17, hồi quy khách 31/31, trang chủ 14/14.
+- **2026-11-25:** Tạo `docs/THIRD_PARTY_SERVICES.md`. Gom dịch vụ bên thứ 3 vào `src/server/integrations/` theo kiểu adapter: storage (local), email/sms (console), payment (chỉ có types), google (chuyển từ services). Hồi quy admin 26/26.
+- **2026-11-25:** Đăng nhập 2 bước bằng SĐT/email + mật khẩu, trang đăng ký, đổi/đặt mật khẩu ở /account, admin `/admin/customers` đặt lại mật khẩu. Index users chuyển sang partial unique (phone/email/googleSub). Test: check:accounts 18/18, E2E auth 28/28, hồi quy khách 31/31, admin 26/26, trang chủ 14/14.
+- **2026-11-25:** Đăng nhập khách bằng Google (tự viết OAuth PKCE), trang `/login`, `/account` (hồ sơ, địa chỉ, wishlist, đơn hàng đang placeholder), header hiện tên khách. Proxy chặn `/account` bằng 307. Test: 8/8 offline OAuth, 31/31 E2E khách, hồi quy admin 26/26, trang chủ 14/14.
+- **2026-11-25:** Trang chủ: hero (ảnh của sản phẩm "Mới về" đầu tiên có ảnh), Mới về, dải Chase & Limited, khối order, cam kết, header/footer/nút Messenger (ẩn khi chưa có link). Cache theo tag, admin sửa là cập nhật ngay. E2E 14/14 pass trên bản build production.
 - **2026-11-25:** Phần 2 (Admin): đăng nhập + proxy, CRUD sản phẩm + upload ảnh (chọn ảnh đại diện, xóa ảnh), lọc/tìm, cài đặt cửa hàng. Test E2E bằng Edge: 26/26 pass. Đã sửa: form bị React 19 xóa trắng sau submit, `Date.now()` lúc prerender, link `javascript:`.
 - **2026-11-25:** Thêm `scripts/seed.ts` (chạy bằng tsx, dùng lại model của app) và lệnh `db:seed`. Đã seed DB local.
 - **2026-11-25:** Phần 1: dựng Next.js 16 + Tailwind 4, Mongoose model (Product, Order, Settings), Zod schema, kết nối DB, `/api/health`, MongoDB bằng Docker. Typecheck, lint và build đều pass, health trả `database: up`.

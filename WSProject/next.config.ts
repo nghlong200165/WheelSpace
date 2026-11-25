@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
   images: {
     // Product photos uploaded from the admin, served by src/app/uploads/[...path]/route.ts.
     localPatterns: [{ pathname: "/uploads/**", search: "" }],
+    // Google account avatars shown on /account.
+    remotePatterns: [{ protocol: "https", hostname: "lh3.googleusercontent.com" }],
   },
   experimental: {
     // Product forms upload several phone photos at once (default limits are 1MB / 10MB).

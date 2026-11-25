@@ -4,7 +4,7 @@ import { startTransition, useActionState, type FormEvent } from "react";
 import { saveSettingsAction } from "@/server/actions/settings";
 import { INITIAL_FORM_STATE } from "@/lib/form-state";
 import type { SettingsDTO } from "@/lib/schemas/settings";
-import { CheckboxField, FormMessage, Panel, TextField, buttonPrimary } from "./fields";
+import { CheckboxField, FormMessage, Panel, TextField, buttonPrimary } from "@/components/ui/fields";
 
 export function SettingsForm({ settings, payosLive }: { settings: SettingsDTO; payosLive: boolean }) {
   const [state, formAction, pending] = useActionState(saveSettingsAction, INITIAL_FORM_STATE);

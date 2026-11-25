@@ -28,11 +28,16 @@ Rule làm việc & onboarding: @ONBOARDING.md
 | Validate | Zod (schema dùng chung FE/BE trong `src/lib/schemas/`) | 4 |
 | Thanh toán | payOS (VietQR, webhook) + COD. Demo: `PAYMENT_PROVIDER=mock` | |
 | Auth admin | 1 tài khoản admin từ env + cookie phiên ký bằng `SESSION_SECRET` | |
-| Ảnh | Demo: lưu `public/uploads/`. Sau chuyển Cloudinary | |
+| Ảnh | Demo: lưu thư mục `uploads/` (gitignored), phục vụ qua route `/uploads/[...path]`. Trước khi deploy Vercel phải đổi `src/server/services/storage.ts` sang Cloudinary | |
 | Hạ tầng / Deploy | Vercel (gói free) | |
 
 > Next 16 khác bản cũ: đọc tài liệu trong `node_modules/next/dist/docs/` trước khi dùng API lạ (xem `AGENTS.md`).
 > Khi có Cache Components, component đọc DB phải nằm trong `<Suspense>` hoặc dùng `'use cache'`. Route handler đọc DB thì gọi `await connection()`.
+> Bẫy Next 16 đã gặp:
+> - `usePathname()` / `useSearchParams()` ở route động phải bọc `<Suspense>`.
+> - `Date.now()` trước khi gọi `connection()` sẽ báo lỗi prerender.
+> - Form dùng `action={formAction}` bị React 19 xóa trắng sau khi submit. Phải submit qua `onSubmit` + `startTransition`, xem `ProductForm`.
+> - **Không chạy `npm run build` khi `npm run dev` đang chạy cùng thư mục**, vì dev server sẽ lẫn trạng thái và trang tự reload liên tục.
 
 ## 3. Cấu trúc thư mục
 
@@ -40,10 +45,20 @@ Rule làm việc & onboarding: @ONBOARDING.md
 WheelSpace/                    # Gốc repo git
 └── WSProject/                 # Project Next.js
     ├── src/
-    │   ├── app/               # FE: trang (routing) + api/ (route handler mỏng)
-    │   ├── components/        # FE: UI dùng chung
-    │   ├── lib/               # Dùng chung FE/BE: format, schemas/ (Zod + DTO type)
-    │   └── server/            # BE (server-only): env, db, models/, services/, actions/
+    │   ├── app/               # FE: trang (routing) + route handler mỏng
+    │   │   ├── admin/login/   #   đăng nhập admin
+    │   │   ├── admin/(panel)/ #   trang admin có sidebar: products, settings, orders
+    │   │   ├── api/health/    #   kiểm tra DB
+    │   │   └── uploads/       #   phục vụ ảnh sản phẩm từ thư mục uploads/
+    │   ├── components/admin/  # FE: form + field admin
+    │   ├── lib/               # Dùng chung FE/BE: format, form-state, schemas/ (Zod + DTO type)
+    │   ├── proxy.ts           # Chặn /admin/* khi chưa có cookie hợp lệ (kiểm tra sơ bộ)
+    │   └── server/            # BE (server-only)
+    │       ├── auth/          #   token.ts (ký HMAC, dùng cả trong proxy), session.ts (requireAdmin)
+    │       ├── actions/       #   Server Actions: auth, products, settings
+    │       ├── services/      #   products, settings, storage, auth, health
+    │       ├── models/        #   Product, Order, Settings
+    │       └── env.ts, db.ts, cache-tags.ts
     ├── scripts/seed.ts        # Seed dữ liệu mẫu (npm run db:seed)
     ├── docker-compose.yml     # MongoDB local
     ├── .env.example           # Mẫu biến môi trường (copy thành .env.local)
@@ -61,7 +76,7 @@ npm run db:seed -- --reset  # Xóa products + orders rồi seed lại (chỉ cho
 npm run dev            # Dev server: http://localhost:3000, kiểm tra DB: /api/health
 npm run typecheck      # Kiểm tra type
 npm run lint           # ESLint
-npm run build          # Build production
+npm run build          # Build production (tắt dev server trước, xem lưu ý mục 2)
 npm run db:down        # Tắt MongoDB
 ```
 
@@ -80,7 +95,11 @@ npm run db:down        # Tắt MongoDB
   2. Trang và component không gọi DB hay model trực tiếp, luôn đi qua service.
   3. Server Action và route handler chỉ là lớp mỏng: validate bằng Zod, gọi service, trả kết quả.
   4. Service trả DTO (object thuần), không trả document Mongoose.
-  5. Mọi file trong `src/server/` có `import "server-only"`.
+  5. Mọi file trong `src/server/` có `import "server-only"`. Có 2 ngoại lệ: file `"use server"` trong `actions/`, và `auth/token.ts` vì proxy cũng import file này.
+  6. Mọi trang admin và Server Action admin đều gọi `requireAdmin()`. Proxy chỉ là lớp chặn sơ bộ.
+- [2026-11-25] Admin không dùng Auth.js: chỉ có 1 admin, email/mật khẩu đặt trong env, cookie phiên ký HMAC-SHA256 có hạn 7 ngày. Trang admin đặt `instant = false` (chấp nhận điều hướng chờ server).
+- [2026-11-25] Ảnh sản phẩm: tối đa 10 ảnh, mỗi ảnh ≤ 8MB, chỉ nhận JPG/PNG/WEBP, tên file là UUID. Ảnh đầu tiên là ảnh đại diện. Sửa hoặc xóa sản phẩm thì xóa luôn file ảnh không còn dùng.
+- [2026-11-25] Link Messenger chỉ chấp nhận http/https (giá trị này được render thành href, chặn `javascript:`).
 - [2026-11-25] Đơn payOS trừ kho ngay khi tạo đơn và hết hạn thanh toán sau 30 phút (hủy đơn và trả kho). Mã đơn có dạng `WS-XXXXXX`. Địa chỉ gồm Tỉnh/Thành + Phường/Xã nhập dạng text.
 - [2026-11-25] MongoDB local chạy ở cổng 27018, vì 27017 đã bị container `revoland-mongo` của dự án khác chiếm.
 
@@ -104,18 +123,19 @@ Env được validate trong `src/server/env.ts`. Thêm biến mới thì cập n
 
 > Cập nhật mục này cuối mỗi phiên. Đây là phần quan trọng nhất khi đổi tài khoản.
 
-- **Đang làm:** Xong phần 1 (khung dự án), chờ chủ dự án review. Wireframe: https://claude.ai/artifact/R7DLqD6UVgxFdshyNYvB2w
+- **Đang làm:** Xong phần 2 (Admin), chờ chủ dự án review. Wireframe: https://claude.ai/artifact/R7DLqD6UVgxFdshyNYvB2w
 - **Việc tiếp theo** (mỗi phần làm xong phải chờ review):
-  1. Phần 2: Admin gồm đăng nhập, CRUD sản phẩm, upload ảnh, cài đặt.
-  2. Phần 3: Cửa hàng gồm trang chủ, danh sách, chi tiết, giỏ hàng.
-  3. Phần 4: Đặt hàng gồm checkout, trừ kho, COD, payOS mock, tra cứu đơn, quản lý đơn.
-- **Git:** `main` chỉ có README. Toàn bộ code phần 1 và seed nằm trên `dev`, chờ chủ dự án test rồi mới merge vào `main`.
+  1. Phần 3: Cửa hàng gồm trang chủ, danh sách, chi tiết, giỏ hàng. Đọc dữ liệu bằng `'use cache'` + `cacheTag(CACHE_TAGS.products)`, vì các action admin đã gọi `updateTag`.
+  2. Phần 4: Đặt hàng gồm checkout, trừ kho, COD, payOS mock, tra cứu đơn, quản lý đơn (trang `/admin/orders` đang là placeholder).
+- **Còn nợ:** chưa giới hạn số lần đăng nhập sai (brute-force); ảnh đang lưu đĩa local nên chưa deploy Vercel được.
+- **Git:** `main` chỉ có README. Phần 1 và seed đã ở trên `dev` (đã push). Phần 2 chưa commit.
 - **Vấn đề / blocker:** (không có)
 
 ## 8. Nhật ký phiên
 
 <!-- Mới nhất ở trên. Mỗi phiên 2–4 dòng: đã làm gì, còn dở gì. -->
 
+- **2026-11-25:** Phần 2 (Admin): đăng nhập + proxy, CRUD sản phẩm + upload ảnh (chọn ảnh đại diện, xóa ảnh), lọc/tìm, cài đặt cửa hàng. Test E2E bằng Edge: 26/26 pass. Đã sửa: form bị React 19 xóa trắng sau submit, `Date.now()` lúc prerender, link `javascript:`.
 - **2026-11-25:** Thêm `scripts/seed.ts` (chạy bằng tsx, dùng lại model của app) và lệnh `db:seed`. Đã seed DB local.
 - **2026-11-25:** Phần 1: dựng Next.js 16 + Tailwind 4, Mongoose model (Product, Order, Settings), Zod schema, kết nối DB, `/api/health`, MongoDB bằng Docker. Typecheck, lint và build đều pass, health trả `database: up`.
 - **2026-11-25:** Làm wireframe 7 trang khách + 5 trang admin. Phong cách: nền #F6F5F2, chữ #121212, màu nhấn đỏ #B3121E, font Be Vietnam Pro.

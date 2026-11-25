@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
@@ -11,6 +10,15 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
+  },
+  images: {
+    // Product photos uploaded from the admin, served by src/app/uploads/[...path]/route.ts.
+    localPatterns: [{ pathname: "/uploads/**", search: "" }],
+  },
+  experimental: {
+    // Product forms upload several phone photos at once (default limits are 1MB / 10MB).
+    serverActions: { bodySizeLimit: "40mb" },
+    proxyClientMaxBodySize: "40mb",
   },
 };
 

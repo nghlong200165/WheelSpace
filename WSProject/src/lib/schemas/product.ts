@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const MAX_PRODUCT_IMAGES = 10;
+
 export const RARITIES = ["normal", "chase", "limited"] as const;
 export const CONDITIONS = ["new", "like_new", "used"] as const;
 
@@ -22,13 +24,13 @@ export const CONDITION_LABELS: Record<Condition, string> = {
 export const productInputSchema = z.object({
   code: z.string().trim().min(1, "Nhập mã sản phẩm").max(32),
   name: z.string().trim().min(1, "Nhập tên sản phẩm").max(160),
-  price: z.coerce.number().int().min(0, "Giá không hợp lệ"),
+  price: z.coerce.number({ error: "Nhập giá" }).int().min(0, "Giá không hợp lệ"),
   rarity: z.enum(RARITIES),
   condition: z.enum(CONDITIONS),
-  stock: z.coerce.number().int().min(0, "Tồn kho không hợp lệ"),
+  stock: z.coerce.number({ error: "Nhập số lượng tồn" }).int().min(0, "Tồn kho không hợp lệ"),
   conditionNote: z.string().trim().max(500).default(""),
   description: z.string().trim().max(5000).default(""),
-  images: z.array(z.string()).default([]),
+  images: z.array(z.string()).max(MAX_PRODUCT_IMAGES, `Tối đa ${MAX_PRODUCT_IMAGES} ảnh`).default([]),
   isVisible: z.boolean().default(true),
   isNewArrival: z.boolean().default(false),
 });

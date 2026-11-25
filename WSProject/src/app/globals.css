@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+/* Design tokens from the wireframe: https://claude.ai/artifact/R7DLqD6UVgxFdshyNYvB2w */
+@theme {
+  --color-ground: #f6f5f2;
+  --color-surface: #ffffff;
+  --color-ink: #121212;
+  --color-muted: #5f5f5f;
+  --color-line: #dedbd4;
+  --color-line-soft: #eeece7;
+  --color-placeholder: #e8e6e0;
+  --color-accent: #b3121e;
+  --color-success: #1f6b3a;
+  --color-warning: #8a5a00;
+
+  --font-sans: var(--font-be-vietnam-pro), system-ui, sans-serif;
+
+  --tracking-eyebrow: 0.16em;
+  --tracking-brand: 0.32em;
+}
+
+body {
+  background: var(--color-ground);
+  color: var(--color-ink);
+}
+
+a:hover {
+  color: var(--color-accent);
+}

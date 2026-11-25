@@ -1,0 +1,14 @@
+# MongoDB for local development.
+# Port 27018 avoids clashing with other projects already using 27017.
+services:
+  mongo:
+    image: mongo:8
+    container_name: wheelspace-mongo
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    volumes:
+      - wheelspace-mongo-data:/data/db
+
+volumes:
+  wheelspace-mongo-data:

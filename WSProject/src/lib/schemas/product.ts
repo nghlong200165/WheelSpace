@@ -24,6 +24,8 @@ export const CONDITION_LABELS: Record<Condition, string> = {
 export const productInputSchema = z.object({
   code: z.string().trim().min(1, "Nhập mã sản phẩm").max(32),
   name: z.string().trim().min(1, "Nhập tên sản phẩm").max(160),
+  // Car maker shown in the storefront "Hãng xe" filter (e.g. "Nissan", "Porsche").
+  brand: z.string().trim().min(1, "Nhập hãng xe").max(60),
   price: z.coerce.number({ error: "Nhập giá" }).int().min(0, "Giá không hợp lệ"),
   rarity: z.enum(RARITIES),
   condition: z.enum(CONDITIONS),

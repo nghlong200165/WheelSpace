@@ -11,6 +11,7 @@ import {
   type ProductInput,
   type Rarity,
 } from "@/lib/schemas/product";
+import type { CatalogFilter } from "@/lib/schemas/catalog";
 
 type LeanProduct = ProductDoc & { _id: Types.ObjectId; createdAt: Date; updatedAt: Date };
 
@@ -19,6 +20,7 @@ function toDTO(doc: LeanProduct): ProductDTO {
     id: doc._id.toString(),
     code: doc.code,
     name: doc.name,
+    brand: doc.brand ?? "",
     price: doc.price,
     rarity: doc.rarity as Rarity,
     condition: doc.condition as Condition,
@@ -36,6 +38,12 @@ function toDTO(doc: LeanProduct): ProductDTO {
 
 function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Reuse the spelling of an existing brand ("porsche" -> "Porsche") so the filter has no near-duplicates.
+async function canonicalBrand(brand: string): Promise<string> {
+  const existing = await Product.findOne({ brand: new RegExp(`^${escapeRegex(brand)}$`, "i") }, { brand: 1 }).lean<LeanProduct>();
+  return existing?.brand || brand;
 }
 
 function isDuplicateKeyError(err: unknown): boolean {
@@ -111,6 +119,48 @@ export async function listRareProducts(limit: number): Promise<ProductDTO[]> {
   return docs.map(toDTO);
 }
 
+// Storefront product list: visible products only, filtered / sorted / paginated.
+export async function listProductsForStore(
+  filter: CatalogFilter,
+  pageSize: number,
+): Promise<{ items: ProductDTO[]; total: number; page: number; pageCount: number }> {
+  await connectDb();
+  const query: Record<string, unknown> = { isVisible: true };
+  if (filter.q) {
+    const pattern = new RegExp(escapeRegex(filter.q), "i");
+    query.$or = [{ name: pattern }, { code: pattern }];
+  }
+  if (filter.rarities.length) query.rarity = { $in: filter.rarities };
+  if (filter.brand) query.brand = filter.brand;
+  if (filter.conditions.length) query.condition = { $in: filter.conditions };
+  // Both or neither stock boxes ticked = no stock filter.
+  if (filter.stock.length === 1) query.stock = filter.stock[0] === "in" ? { $gt: 0 } : 0;
+
+  const sort: Record<string, 1 | -1> =
+    filter.sort === "price_asc"
+      ? { price: 1, _id: 1 }
+      : filter.sort === "price_desc"
+        ? { price: -1, _id: -1 }
+        : { createdAt: -1, _id: -1 };
+
+  const total = await Product.countDocuments(query);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(filter.page, pageCount);
+  const docs = await Product.find(query)
+    .sort(sort)
+    .skip((page - 1) * pageSize)
+    .limit(pageSize)
+    .lean<LeanProduct[]>();
+  return { items: docs.map(toDTO), total, page, pageCount };
+}
+
+// Brands for the storefront filter (visible products only) or the admin form suggestions (all).
+export async function listBrands({ visibleOnly }: { visibleOnly: boolean }): Promise<string[]> {
+  await connectDb();
+  const brands: string[] = await Product.distinct("brand", visibleOnly ? { isVisible: true } : {});
+  return brands.filter(Boolean).sort((a, b) => a.localeCompare(b, "vi"));
+}
+
 // Storefront: visible products for the given ids, in the same order (e.g. a wishlist).
 export async function listVisibleProductsByIds(ids: string[]): Promise<ProductDTO[]> {
   const valid = ids.filter((id) => isValidObjectId(id));
@@ -149,7 +199,7 @@ export async function createProduct(input: ProductInput, newImages: File[]): Pro
   await connectDb();
   const uploaded = await uploadAll(newImages);
   try {
-    const doc = await Product.create({ ...input, images: uploaded });
+    const doc = await Product.create({ ...input, brand: await canonicalBrand(input.brand), images: uploaded });
     return toDTO(doc.toObject() as LeanProduct);
   } catch (err) {
     await deleteImages(uploaded);
@@ -175,7 +225,7 @@ export async function updateProduct(id: string, input: ProductInput, newImages: 
   try {
     const doc = await Product.findByIdAndUpdate(
       id,
-      { ...input, images: [...kept, ...uploaded] },
+      { ...input, brand: await canonicalBrand(input.brand), images: [...kept, ...uploaded] },
       { returnDocument: "after", runValidators: true },
     ).lean<LeanProduct>();
     if (!doc) throw new ServiceError("Không tìm thấy sản phẩm");

@@ -1,5 +1,5 @@
 import "server-only";
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { Schema, deleteModel, model, models, type InferSchemaType, type Model } from "mongoose";
 import { ORDER_STATUSES, PAYMENT_METHODS, PAYMENT_STATUSES } from "@/lib/schemas/order";
 
 const orderItemSchema = new Schema(
@@ -48,5 +48,6 @@ orderSchema.index({ paymentStatus: 1, paymentExpiresAt: 1 });
 
 export type OrderDoc = InferSchemaType<typeof orderSchema>;
 
-export const Order: Model<OrderDoc> =
-  (models.Order as Model<OrderDoc>) || model<OrderDoc>("Order", orderSchema);
+// Replace the cached model on dev hot reload (see Product.ts).
+if (models.Order) deleteModel("Order");
+export const Order: Model<OrderDoc> = model<OrderDoc>("Order", orderSchema);

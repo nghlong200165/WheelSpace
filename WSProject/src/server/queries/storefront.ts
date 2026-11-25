@@ -1,7 +1,8 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { CACHE_TAGS } from "../cache-tags";
-import { listBannerProducts, listNewArrivals, listRareProducts } from "../services/products";
+import { listBannerProducts, listBrands, listNewArrivals, listProductsForStore, listRareProducts } from "../services/products";
+import { CATALOG_PAGE_SIZE, type CatalogFilter } from "@/lib/schemas/catalog";
 import { getSettings } from "../services/settings";
 
 // Cached storefront reads (Next-specific layer on top of the framework-agnostic services).
@@ -26,6 +27,21 @@ export async function getRareProducts(limit = 3) {
   cacheTag(CACHE_TAGS.products);
   cacheLife("hours");
   return listRareProducts(limit);
+}
+
+// One cache entry per normalized filter (the filter object is the cache key).
+export async function getCatalog(filter: CatalogFilter) {
+  "use cache";
+  cacheTag(CACHE_TAGS.products);
+  cacheLife("hours");
+  return listProductsForStore(filter, CATALOG_PAGE_SIZE);
+}
+
+export async function getBrands() {
+  "use cache";
+  cacheTag(CACHE_TAGS.products);
+  cacheLife("hours");
+  return listBrands({ visibleOnly: true });
 }
 
 export async function getStoreSettings() {

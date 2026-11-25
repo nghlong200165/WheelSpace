@@ -37,6 +37,8 @@ Rule làm việc & onboarding: @ONBOARDING.md
 > - `usePathname()` / `useSearchParams()` ở route động phải bọc `<Suspense>`.
 > - `Date.now()` trước khi gọi `connection()` sẽ báo lỗi prerender.
 > - Form dùng `action={formAction}` bị React 19 xóa trắng sau khi submit. Phải submit qua `onSubmit` + `startTransition`, xem `ProductForm`.
+> - Sửa dữ liệu **thẳng trong DB** (mongosh, Compass, script) thì cache `'use cache'` của cửa hàng **không tự làm mới**. Phải lưu 1 sản phẩm/cài đặt qua admin (gọi `updateTag`) hoặc khởi động lại server.
+> - Model Mongoose luôn được tạo lại khi file nạp lại (`deleteModel` rồi `model`), để dev server không giữ schema cũ.
 > - **Không chạy `npm run build` khi `npm run dev` đang chạy cùng thư mục**, vì dev server sẽ lẫn trạng thái và trang tự reload liên tục.
 
 ## 3. Cấu trúc thư mục
@@ -50,7 +52,7 @@ WheelSpace/                    # Gốc repo git
     │   │   ├── admin/(panel)/ #   trang admin có sidebar: products, settings, orders
     │   │   ├── api/health/    #   kiểm tra DB
     │   │   └── uploads/       #   phục vụ ảnh sản phẩm từ thư mục uploads/
-    │   ├── app/(shop)/        #   cửa hàng: layout (header/footer/nút Messenger), trang chủ, login, register, account
+    │   ├── app/(shop)/        #   cửa hàng: layout (header/footer/nút Messenger), trang chủ, products, login, register, account
     │   ├── app/admin/(panel)/customers/ # admin: danh sách khách + đặt lại mật khẩu
     │   ├── app/auth/google/   #   OAuth Google: bắt đầu (route.ts) + callback
     │   ├── components/admin/  # FE: form admin
@@ -159,20 +161,25 @@ Env được validate trong `src/server/env.ts`. Thêm biến mới thì cập n
 
 > Cập nhật mục này cuối mỗi phiên. Đây là phần quan trọng nhất khi đổi tài khoản.
 
-- **Đang làm:** Phần 3 làm từng trang theo yêu cầu chủ dự án. Đã xong **trang chủ**, **đăng nhập (SĐT/email + mật khẩu, Google), đăng ký, /account, admin Khách hàng**, chờ review. Chủ dự án cần tạo Google OAuth client để thử đăng nhập thật. Wireframe: https://claude.ai/artifact/R7DLqD6UVgxFdshyNYvB2w
+- **Đang làm:** Phần 3 làm từng trang theo yêu cầu chủ dự án. Đã xong **trang chủ**, **đăng nhập (SĐT/email + mật khẩu, Google), đăng ký, /account, admin Khách hàng**, **trang danh sách `/products`**. Trang danh sách chờ review. Chủ dự án cần tạo Google OAuth client để thử đăng nhập thật. Wireframe: https://claude.ai/artifact/R7DLqD6UVgxFdshyNYvB2w
 - **Việc tiếp theo** (mỗi trang làm xong phải chờ review):
-  1. Trang danh sách `/products`: lọc `rarity` (giá trị `rare` = Chase + Limited, header và trang chủ đang link tới), tình trạng, còn hàng, tìm kiếm, sắp xếp, phân trang.
-  2. Trang chi tiết `/products/[id]`: gắn `WishlistButton` (đã có sẵn).
-  3. Giỏ hàng `/cart`.
-  4. Phần 4: checkout, trừ kho, COD, payOS mock, tra cứu đơn `/order-lookup`, quản lý đơn (trang `/admin/orders` đang là placeholder).
+  1. Trang chi tiết `/products/[id]`: gắn `WishlistButton` (đã có sẵn). Mọi thẻ sản phẩm đang link tới trang này.
+  2. Giỏ hàng `/cart`.
+  3. Phần 4: checkout, trừ kho, COD, payOS mock, tra cứu đơn `/order-lookup`, quản lý đơn (trang `/admin/orders` đang là placeholder).
 - **Còn nợ:** chưa giới hạn số lần đăng nhập sai của **admin** (khách đã có khóa 5 lần sai). Ảnh đang lưu đĩa local nên chưa deploy Vercel được (cần Cloudinary). Các dịch vụ tốn phí xem `docs/THIRD_PARTY_SERVICES.md`.
-- **Git:** `main` chỉ có README. Mọi phần đã làm (khung, admin, trang chủ + slider, đăng nhập/đăng ký, integrations) đã ở trên `dev` và đã push. Chờ chủ dự án test rồi mới merge vào `main`. Thư mục `WheelSpace/Image/` (ảnh thử) cố ý không commit.
+- **Git:** `main` chỉ có README. Mọi phần đã làm (khung, admin, trang chủ + slider, đăng nhập/đăng ký, integrations, trang danh sách + bộ lọc hãng) đã ở trên `dev` và đã push. Chờ chủ dự án test rồi mới merge vào `main`. Thư mục `WheelSpace/Image/` (ảnh thử) cố ý không commit.
 - **Vấn đề / blocker:** (không có)
 
 ## 8. Nhật ký phiên
 
 <!-- Mới nhất ở trên. Mỗi phiên 2–4 dòng: đã làm gì, còn dở gì. -->
 
+- **2026-11-25:** Trang `/products`:
+  - Lọc theo độ hiếm / tình trạng / kho (chọn nhiều, `rarity=rare` = Chase + Limited), tìm theo tên/mã, sắp xếp, 12 sp/trang.
+  - Bộ lọc nằm trên URL, dùng `next/form` với `scroll={false}` (chuyển trang client-side, không nhảy lên đầu). Tick không tự lọc: phải bấm "TÌM KIẾM" (nút chuyển đen khi có thay đổi chưa áp dụng). Riêng ô Sắp xếp áp dụng ngay. Đọc dữ liệu qua `getCatalog(filter)` có cache.
+  - Đã sửa: checkbox giữ trạng thái cũ sau "Xóa bộ lọc" (thêm `key` theo bộ lọc).
+  - Thêm bộ lọc **Hãng xe** (ô chọn cạnh Sắp xếp, áp dụng ngay). Sản phẩm có trường `brand` bắt buộc, admin nhập có gợi ý, gõ khác hoa/thường thì tự dùng cách viết của hãng đã có. Danh sách hãng lấy tự động từ sản phẩm đang hiện. URL bỏ tham số rỗng/mặc định (`/products?brand=Nissan`).
+  - E2E 38/38. Bài test trang chủ cũ (`home.mjs`) cần viết lại vì dữ liệu mẫu đã có ảnh thật.
 - **2026-11-25:** Slider ảnh xe ở hero trang chủ, thêm trường `isFeatured` cho sản phẩm. Header trên điện thoại chỉ hiện biểu tượng cho tài khoản/giỏ hàng. E2E slider 17/17, hồi quy khách 31/31, trang chủ 14/14.
 - **2026-11-25:** Tạo `docs/THIRD_PARTY_SERVICES.md`. Gom dịch vụ bên thứ 3 vào `src/server/integrations/` theo kiểu adapter: storage (local), email/sms (console), payment (chỉ có types), google (chuyển từ services). Hồi quy admin 26/26.
 - **2026-11-25:** Đăng nhập 2 bước bằng SĐT/email + mật khẩu, trang đăng ký, đổi/đặt mật khẩu ở /account, admin `/admin/customers` đặt lại mật khẩu. Index users chuyển sang partial unique (phone/email/googleSub). Test: check:accounts 18/18, E2E auth 28/28, hồi quy khách 31/31, admin 26/26, trang chủ 14/14.

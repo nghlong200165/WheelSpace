@@ -131,7 +131,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
                     </div>
                     <div className="flex flex-col gap-0.5">
                       <span className="font-medium">{p.name}</span>
-                      <span className="text-xs text-muted">{p.code}</span>
+                      <span className="text-xs text-muted">{p.brand ? `${p.brand} · ${p.code}` : p.code}</span>
                     </div>
                   </div>
                 </td>

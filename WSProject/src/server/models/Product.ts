@@ -1,11 +1,12 @@
 import "server-only";
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { Schema, deleteModel, model, models, type InferSchemaType, type Model } from "mongoose";
 import { CONDITIONS, RARITIES } from "@/lib/schemas/product";
 
 const productSchema = new Schema(
   {
     code: { type: String, required: true, trim: true, unique: true },
     name: { type: String, required: true, trim: true },
+    brand: { type: String, trim: true, default: "" },
     price: { type: Number, required: true, min: 0 },
     rarity: { type: String, enum: RARITIES, required: true, default: "normal" },
     condition: { type: String, enum: CONDITIONS, required: true, default: "new" },
@@ -21,9 +22,12 @@ const productSchema = new Schema(
 );
 
 productSchema.index({ isVisible: 1, createdAt: -1 });
+productSchema.index({ isVisible: 1, brand: 1 });
 productSchema.index({ name: "text", code: "text" });
 
 export type ProductDoc = InferSchemaType<typeof productSchema>;
 
-export const Product: Model<ProductDoc> =
-  (models.Product as Model<ProductDoc>) || model<ProductDoc>("Product", productSchema);
+// Dev hot reload re-runs this file, possibly with a changed schema. Reusing the cached model would
+// keep the old schema (new fields silently dropped on save), so always replace it.
+if (models.Product) deleteModel("Product");
+export const Product: Model<ProductDoc> = model<ProductDoc>("Product", productSchema);

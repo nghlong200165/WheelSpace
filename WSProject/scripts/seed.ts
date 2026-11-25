@@ -12,21 +12,21 @@ import { User } from "@/server/models/User";
 import { productInputSchema, type ProductInput } from "@/lib/schemas/product";
 import { DEFAULT_SETTINGS } from "@/lib/schemas/settings";
 
-type SampleProduct = Pick<ProductInput, "code" | "name" | "price" | "rarity" | "condition" | "stock"> &
+type SampleProduct = Pick<ProductInput, "code" | "name" | "brand" | "price" | "rarity" | "condition" | "stock"> &
   Partial<ProductInput>;
 
 // Sample data only: names are real models, codes and prices are placeholders.
 const SAMPLE_PRODUCTS: SampleProduct[] = [
-  { code: "MGT-DEMO-01", name: "Nissan Skyline GT-R (R34) V-Spec", price: 350000, rarity: "chase", condition: "new", stock: 2, isNewArrival: true },
-  { code: "MGT-DEMO-02", name: "Porsche 911 GT3 RS", price: 290000, rarity: "normal", condition: "new", stock: 5, isNewArrival: true },
-  { code: "MGT-DEMO-03", name: "Honda NSX-R", price: 260000, rarity: "normal", condition: "like_new", stock: 1, isNewArrival: true, conditionNote: "Hộp móp nhẹ góc trên, blister nguyên." },
-  { code: "MGT-DEMO-04", name: "Toyota GR Supra", price: 420000, rarity: "limited", condition: "new", stock: 1, isNewArrival: true },
-  { code: "MGT-DEMO-05", name: "Lamborghini Countach LPI 800-4", price: 230000, rarity: "normal", condition: "used", stock: 1, conditionNote: "Đã mở hộp, xe trưng bày, không trầy." },
-  { code: "MGT-DEMO-06", name: "Mazda RX-7 (FD3S)", price: 290000, rarity: "normal", condition: "new", stock: 0 },
-  { code: "MGT-DEMO-07", name: "BMW M4 GT3", price: 450000, rarity: "limited", condition: "new", stock: 3 },
-  { code: "MGT-DEMO-08", name: "Nissan GT-R Nismo", price: 380000, rarity: "chase", condition: "like_new", stock: 0 },
-  { code: "MGT-DEMO-09", name: "Toyota AE86 Sprinter Trueno", price: 290000, rarity: "normal", condition: "new", stock: 4 },
-  { code: "MGT-DEMO-10", name: "Mercedes-AMG GT3", price: 310000, rarity: "normal", condition: "new", stock: 2, isVisible: false },
+  { code: "MGT-DEMO-01", name: "Nissan Skyline GT-R (R34) V-Spec", brand: "Nissan", price: 350000, rarity: "chase", condition: "new", stock: 2, isNewArrival: true },
+  { code: "MGT-DEMO-02", name: "Porsche 911 GT3 RS", brand: "Porsche", price: 290000, rarity: "normal", condition: "new", stock: 5, isNewArrival: true },
+  { code: "MGT-DEMO-03", name: "Honda NSX-R", brand: "Honda", price: 260000, rarity: "normal", condition: "like_new", stock: 1, isNewArrival: true, conditionNote: "Hộp móp nhẹ góc trên, blister nguyên." },
+  { code: "MGT-DEMO-04", name: "Toyota GR Supra", brand: "Toyota", price: 420000, rarity: "limited", condition: "new", stock: 1, isNewArrival: true },
+  { code: "MGT-DEMO-05", name: "Lamborghini Countach LPI 800-4", brand: "Lamborghini", price: 230000, rarity: "normal", condition: "used", stock: 1, conditionNote: "Đã mở hộp, xe trưng bày, không trầy." },
+  { code: "MGT-DEMO-06", name: "Mazda RX-7 (FD3S)", brand: "Mazda", price: 290000, rarity: "normal", condition: "new", stock: 0 },
+  { code: "MGT-DEMO-07", name: "BMW M4 GT3", brand: "BMW", price: 450000, rarity: "limited", condition: "new", stock: 3 },
+  { code: "MGT-DEMO-08", name: "Nissan GT-R Nismo", brand: "Nissan", price: 380000, rarity: "chase", condition: "like_new", stock: 0 },
+  { code: "MGT-DEMO-09", name: "Toyota AE86 Sprinter Trueno", brand: "Toyota", price: 290000, rarity: "normal", condition: "new", stock: 4 },
+  { code: "MGT-DEMO-10", name: "Mercedes-AMG GT3", brand: "Mercedes-AMG", price: 310000, rarity: "normal", condition: "new", stock: 2, isVisible: false },
 ];
 
 function isLocalUri(uri: string): boolean {

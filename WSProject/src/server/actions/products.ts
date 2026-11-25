@@ -24,6 +24,7 @@ export async function saveProductAction(_prev: FormState, formData: FormData): P
   const parsed = productInputSchema.safeParse({
     code: text(formData, "code"),
     name: text(formData, "name"),
+    brand: text(formData, "brand"),
     price: digits(formData, "price"),
     rarity: text(formData, "rarity"),
     condition: text(formData, "condition"),

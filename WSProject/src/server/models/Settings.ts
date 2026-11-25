@@ -1,5 +1,5 @@
 import "server-only";
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { Schema, deleteModel, model, models, type InferSchemaType, type Model } from "mongoose";
 import { DEFAULT_SETTINGS } from "@/lib/schemas/settings";
 
 // Single document holding store-wide settings editable from the admin.
@@ -21,5 +21,6 @@ const settingsSchema = new Schema(
 
 export type SettingsDoc = InferSchemaType<typeof settingsSchema>;
 
-export const Settings: Model<SettingsDoc> =
-  (models.Settings as Model<SettingsDoc>) || model<SettingsDoc>("Settings", settingsSchema);
+// Replace the cached model on dev hot reload (see Product.ts).
+if (models.Settings) deleteModel("Settings");
+export const Settings: Model<SettingsDoc> = model<SettingsDoc>("Settings", settingsSchema);

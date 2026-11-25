@@ -1,5 +1,5 @@
 import "server-only";
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { Schema, deleteModel, model, models, type InferSchemaType, type Model } from "mongoose";
 
 // Customer account. Created by phone/email registration or by the first Google login.
 // Guests never get a User document.
@@ -43,4 +43,6 @@ userSchema.index({ googleSub: 1 }, { unique: true, ...whenString("googleSub") })
 
 export type UserDoc = InferSchemaType<typeof userSchema>;
 
-export const User: Model<UserDoc> = (models.User as Model<UserDoc>) || model<UserDoc>("User", userSchema);
+// Replace the cached model on dev hot reload (see Product.ts).
+if (models.User) deleteModel("User");
+export const User: Model<UserDoc> = model<UserDoc>("User", userSchema);

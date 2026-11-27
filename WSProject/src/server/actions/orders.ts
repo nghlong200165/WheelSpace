@@ -19,7 +19,8 @@ export async function lookupOrderAction(_prev: OrderLookupState, formData: FormD
 
   const h = await headers();
   const ip = h.get("x-forwarded-for")?.split(",")[0].trim() || h.get("x-real-ip") || "local";
-  if (hitRateLimit(`order-lookup:${ip}`, LOOKUPS_PER_WINDOW, WINDOW_MS)) {
+  // Off in local development so the lookup can be tested freely; production keeps the limit.
+  if (process.env.NODE_ENV === "production" && hitRateLimit(`order-lookup:${ip}`, LOOKUPS_PER_WINDOW, WINDOW_MS)) {
     return { message: "Bạn tra cứu quá nhiều lần, vui lòng thử lại sau 15 phút." };
   }
 

@@ -181,8 +181,10 @@ Env được validate trong `src/server/env.ts`. Thêm biến mới thì cập n
 
 <!-- Mới nhất ở trên. Mỗi phiên 2–4 dòng: đã làm gì, còn dở gì. -->
 
+- **2026-11-27:** Sửa build Vercel lỗi từ commit `6b767cb`: `/sitemap.xml` là route tĩnh nên bị prerender lúc build, truy vấn Atlas từ máy build bị `buffering timed out` làm hỏng cả build. Thêm `await connection()` để sitemap tạo lúc request (vẫn cache 1h). **Quy tắc: route tĩnh hoàn toàn (○) không được đọc DB lúc build**; build thử bằng `scratchpad/buildcheck` rồi xem cột ○/◐/ƒ. Tra cứu đơn: tắt rate limit khi không phải production để chủ dự án test.
+
 - **2026-11-27:** Tra cứu đơn `/order-lookup` (noindex):
-  - Mã đơn + SĐT (`+84…` và `0…` coi là một). Sai mã hay sai SĐT đều cùng một câu "Không tìm thấy" để không dò được mã. Giới hạn 10 lần / 15 phút / IP (bộ đếm trong bộ nhớ, khởi động lại server là reset). SĐT không lên URL (Server Action trả kết quả).
+  - Mã đơn + SĐT (`+84…` và `0…` coi là một). Sai mã hay sai SĐT đều cùng một câu "Không tìm thấy" để không dò được mã. Giới hạn 10 lần / 15 phút / IP, chỉ bật ở production (dev tắt để test; bộ đếm trong bộ nhớ). SĐT không lên URL (Server Action trả kết quả).
   - Kết quả (`OrderLookupDTO`, `src/server/services/orders.ts`) che bớt người nhận: tên, SĐT `090****567`, chỉ phường + tỉnh. Tiến trình dạng đường đua (`OrderTrack`): xe chạy tới trạng thái hiện tại; đơn hủy thì xe dừng ở bước cuối đã qua, vạch xám.
   - Order có thêm `statusHistory` (thời điểm từng trạng thái); **admin đổi trạng thái sau này phải push vào đây**. Ngày giờ hiển thị qua `formatOrderTime` (giờ VN).
   - Seed thêm 5 đơn mẫu `WS-DEMO-01..05` (mỗi trạng thái một đơn, SĐT `0901234567`), chỉ thêm khi chưa có.

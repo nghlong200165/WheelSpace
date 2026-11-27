@@ -1,8 +1,17 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { CACHE_TAGS } from "../cache-tags";
-import { listBannerProducts, listBrands, listNewArrivals, listProductsForStore, listRareProducts } from "../services/products";
+import {
+  countProductsByBrand,
+  getVisibleProduct,
+  listBannerProducts,
+  listNewArrivals,
+  listProductsForStore,
+  listRelatedProducts,
+  listRareProducts,
+} from "../services/products";
 import { CATALOG_PAGE_SIZE, type CatalogFilter } from "@/lib/schemas/catalog";
+import type { ProductDTO } from "@/lib/schemas/product";
 import { getSettings } from "../services/settings";
 
 // Cached storefront reads (Next-specific layer on top of the framework-agnostic services).
@@ -37,11 +46,25 @@ export async function getCatalog(filter: CatalogFilter) {
   return listProductsForStore(filter, CATALOG_PAGE_SIZE);
 }
 
-export async function getBrands() {
+export async function getBrandCounts(filter: CatalogFilter) {
   "use cache";
   cacheTag(CACHE_TAGS.products);
   cacheLife("hours");
-  return listBrands({ visibleOnly: true });
+  return countProductsByBrand(filter);
+}
+
+export async function getProduct(id: string) {
+  "use cache";
+  cacheTag(CACHE_TAGS.products);
+  cacheLife("hours");
+  return getVisibleProduct(id);
+}
+
+export async function getRelatedProducts(product: Pick<ProductDTO, "id" | "brand" | "rarity">, limit = 4) {
+  "use cache";
+  cacheTag(CACHE_TAGS.products);
+  cacheLife("hours");
+  return listRelatedProducts(product, limit);
 }
 
 export async function getStoreSettings() {

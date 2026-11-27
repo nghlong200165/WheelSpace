@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { AccountLink, AccountLinkFallback } from "./AccountLink";
-import { BagIcon, SearchIcon } from "./icons";
+import { CartLink } from "./CartLink";
+import { SearchIcon } from "./icons";
 
 export function SiteHeader() {
   return (
@@ -28,10 +29,7 @@ export function SiteHeader() {
           <Suspense fallback={<AccountLinkFallback />}>
             <AccountLink />
           </Suspense>
-          <Link href="/cart" className="flex items-center gap-2 p-3 text-[13px] sm:px-0 sm:py-3">
-            <BagIcon />
-            <span className="sr-only sm:not-sr-only">Giỏ hàng</span>
-          </Link>
+          <CartLink />
         </div>
       </div>
     </header>

@@ -8,7 +8,14 @@ const beVietnamPro = Be_Vietnam_Pro({
   weight: ["300", "400", "500", "600"],
 });
 
+// Absolute base for share-preview images (Facebook / Messenger need full URLs).
+// APP_URL when set, else the Vercel production domain, else local dev.
+const siteUrl =
+  process.env.APP_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: "WheelSpace · Mô hình Mini GT 1:64",
     template: "%s · WheelSpace",

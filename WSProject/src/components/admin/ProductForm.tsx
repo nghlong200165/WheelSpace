@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { startTransition, useActionState, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { saveProductAction } from "@/server/actions/products";
+import { BRANDS } from "@/lib/brands";
 import { INITIAL_FORM_STATE } from "@/lib/form-state";
 import {
   CONDITIONS,
@@ -26,8 +27,9 @@ import {
 
 const MAX_IMAGE_MB = 8;
 
-// `brands`: existing brands, suggested while typing so the storefront filter has no near-duplicates.
-export function ProductForm({ product, brands }: { product?: ProductDTO; brands: string[] }) {
+const BRAND_OPTIONS = [{ value: "", label: "Chọn hãng xe" }, ...BRANDS.map((b) => ({ value: b, label: b }))];
+
+export function ProductForm({ product }: { product?: ProductDTO }) {
   const [state, formAction, pending] = useActionState(saveProductAction, INITIAL_FORM_STATE);
   const errors = state.fieldErrors ?? {};
 
@@ -104,20 +106,14 @@ export function ProductForm({ product, brands }: { product?: ProductDTO; brands:
             </div>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-[2fr_1fr]">
               <TextField label="Tên sản phẩm *" name="name" defaultValue={product?.name} error={errors.name} />
-              <TextField
+              <SelectField
                 label="Hãng xe *"
                 name="brand"
-                list="brand-suggestions"
-                autoComplete="off"
-                placeholder="Nissan, Porsche…"
-                defaultValue={product?.brand}
+                defaultValue={product?.brand ?? ""}
+                options={BRAND_OPTIONS}
                 error={errors.brand}
+                hint="Thiếu hãng? Thêm vào src/lib/brands.ts"
               />
-              <datalist id="brand-suggestions">
-                {brands.map((b) => (
-                  <option key={b} value={b} />
-                ))}
-              </datalist>
             </div>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-5">
               <SelectField

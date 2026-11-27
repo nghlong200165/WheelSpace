@@ -136,6 +136,14 @@ npm run db:down        # Tắt MongoDB
 - [2026-11-25] Đơn payOS trừ kho ngay khi tạo đơn và hết hạn thanh toán sau 30 phút (hủy đơn và trả kho). Mã đơn có dạng `WS-XXXXXX`. Địa chỉ gồm Tỉnh/Thành + Phường/Xã nhập dạng text.
 - [2026-11-25] MongoDB local chạy ở cổng 27018, vì 27017 đã bị container `revoland-mongo` của dự án khác chiếm.
 
+## 5b. Deploy demo (2026-11-25)
+
+- **Link:** https://wheel-space.vercel.app (Vercel Hobby, project `wheel-space`, Root Directory `WSProject`). Chỉ để đồng nghiệp xem, chưa bán thật.
+- **Tự deploy khi push lên nhánh `dev`.** Nhánh mặc định trên GitHub **đang là `dev`** (đổi tạm vì `main` chỉ có README). Khi merge vào `main` thì đổi lại mặc định và Production Branch trên Vercel.
+- **Database:** MongoDB Atlas, Cluster0 free (M0), Hong Kong, database `wheelspace`, user `wheelspace_app`, IP Access `0.0.0.0/0`. Đã seed 10 sản phẩm mẫu. Dữ liệu tách riêng với Docker trên máy. Cluster free tự pause nếu lâu không dùng, khi đó vào Atlas bấm Resume.
+- **Biến trên Vercel:** `MONGODB_URI`, `SESSION_SECRET`. Chưa đặt `ADMIN_*` nên admin bị khóa. Chưa có Cloudinary nên ảnh chưa hiện (`STORAGE_PROVIDER=local` không ghi được trên Vercel).
+- **Việc nên làm:** đặt Function Region = Hong Kong (hkg1) cho gần DB. Thêm Cloudinary nếu cần ảnh.
+
 ## 6. Biến môi trường & cấu hình
 
 <!-- Chỉ liệt kê TÊN biến và ý nghĩa. KHÔNG ghi giá trị secret vào đây. -->
@@ -163,16 +171,25 @@ Env được validate trong `src/server/env.ts`. Thêm biến mới thì cập n
 
 - **Đang làm:** Phần 3 làm từng trang theo yêu cầu chủ dự án. Đã xong **trang chủ**, **đăng nhập (SĐT/email + mật khẩu, Google), đăng ký, /account, admin Khách hàng**, **trang danh sách `/products`**. Trang danh sách chờ review. Chủ dự án cần tạo Google OAuth client để thử đăng nhập thật. Wireframe: https://claude.ai/artifact/R7DLqD6UVgxFdshyNYvB2w
 - **Việc tiếp theo** (mỗi trang làm xong phải chờ review):
-  1. Trang chi tiết `/products/[id]`: gắn `WishlistButton` (đã có sẵn). Mọi thẻ sản phẩm đang link tới trang này.
-  2. Giỏ hàng `/cart`.
-  3. Phần 4: checkout, trừ kho, COD, payOS mock, tra cứu đơn `/order-lookup`, quản lý đơn (trang `/admin/orders` đang là placeholder).
+  1. Giỏ hàng `/cart` (đọc `useCart()` từ `src/lib/cart.ts`, lấy giá/tồn kho mới nhất từ server). Header và trang chi tiết đang link tới đây.
+  2. Phần 4: checkout, trừ kho, COD, payOS mock, tra cứu đơn `/order-lookup`, quản lý đơn (trang `/admin/orders` đang là placeholder).
 - **Còn nợ:** chưa giới hạn số lần đăng nhập sai của **admin** (khách đã có khóa 5 lần sai). Ảnh đang lưu đĩa local nên chưa deploy Vercel được (cần Cloudinary). Các dịch vụ tốn phí xem `docs/THIRD_PARTY_SERVICES.md`.
-- **Git:** `main` chỉ có README. Mọi phần đã làm (khung, admin, trang chủ + slider, đăng nhập/đăng ký, integrations, trang danh sách + bộ lọc hãng) đã ở trên `dev` và đã push. Chờ chủ dự án test rồi mới merge vào `main`. Thư mục `WheelSpace/Image/` (ảnh thử) cố ý không commit.
+- **Git:** `main` chỉ có README. Mọi phần đã làm (khung, admin, trang chủ + slider, đăng nhập/đăng ký, integrations, trang danh sách + dải nút hãng, trang chi tiết + giỏ localStorage) đã ở trên `dev` và đã push (Vercel tự deploy). Chờ chủ dự án test rồi mới merge vào `main`. Thư mục `WheelSpace/Image/` (ảnh thử) cố ý không commit.
 - **Vấn đề / blocker:** (không có)
 
 ## 8. Nhật ký phiên
 
 <!-- Mới nhất ở trên. Mỗi phiên 2–4 dòng: đã làm gì, còn dở gì. -->
+
+- **2026-11-27:** Bộ lọc hãng đổi thành **dải nút trên lưới**:
+  - Danh sách hãng cố định ở `src/lib/brands.ts` (admin chọn từ danh sách, có mục "Khác").
+  - Chọn được nhiều hãng (`?brand=A&brand=B`). Mỗi nút kèm số mẫu tính theo các bộ lọc khác. Hãng 0 mẫu gom sau "+ N hãng khác".
+- **2026-11-27:** Trang chi tiết `/products/[id]`:
+  - Gallery (ảnh nhỏ, phím mũi tên, vuốt), chọn số lượng ≤ tồn kho, Thêm vào giỏ, wishlist.
+  - Hết hàng thì hiện "Nhắn tin để order". Có "Có thể bạn cũng thích" (cùng hãng trước), metadata/OG cho chia sẻ Facebook (`metadataBase` từ `APP_URL` hoặc domain Vercel).
+  - Giỏ hàng lưu localStorage (`src/lib/cart.ts`), header hiện số lượng.
+  - Sản phẩm ẩn hoặc sai id thì hiện trang not-found + `noindex` (mã HTTP vẫn 200 do streaming, chấp nhận).
+  - E2E: chi tiết 27/27, danh sách 48/48, tài khoản 31/31.
 
 - **2026-11-25:** Trang `/products`:
   - Lọc theo độ hiếm / tình trạng / kho (chọn nhiều, `rarity=rare` = Chase + Limited), tìm theo tên/mã, sắp xếp, 12 sp/trang.

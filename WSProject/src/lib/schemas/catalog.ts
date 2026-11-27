@@ -1,6 +1,8 @@
+import { BRANDS, type Brand } from "../brands";
 import { CONDITIONS, RARITIES, type Condition, type Rarity } from "./product";
 
 // Storefront product list filters, read from / written to the URL (?q=&brand=&rarity=&condition=&stock=&sort=&page=).
+// List filters (brand, rarity, condition, stock) can repeat: ?brand=Nissan&brand=Toyota.
 
 export const CATALOG_PAGE_SIZE = 12;
 
@@ -23,7 +25,7 @@ export const STOCK_LABELS: Record<StockFilter, string> = {
 
 export type CatalogFilter = {
   q: string;
-  brand: string;
+  brands: Brand[];
   rarities: Rarity[];
   conditions: Condition[];
   stock: StockFilter[];
@@ -48,10 +50,9 @@ export function parseCatalogParams(params: RawParams): CatalogFilter {
   const page = Number(Array.isArray(params.page) ? params.page[0] : params.page);
   const sort = Array.isArray(params.sort) ? params.sort[0] : params.sort;
   const q = (Array.isArray(params.q) ? params.q[0] : params.q) ?? "";
-  const brand = (Array.isArray(params.brand) ? params.brand[0] : params.brand) ?? "";
   return {
     q: q.trim().slice(0, 80),
-    brand: brand.trim().slice(0, 60),
+    brands: pickAll(list(params.brand), BRANDS),
     rarities: pickAll(rarityValues, RARITIES),
     conditions: pickAll(list(params.condition), CONDITIONS),
     stock: pickAll(list(params.stock), STOCK_FILTERS),
@@ -65,7 +66,7 @@ export function catalogHref(filter: CatalogFilter, changes: Partial<CatalogFilte
   const f = { ...filter, ...changes };
   const params = new URLSearchParams();
   if (f.q) params.set("q", f.q);
-  if (f.brand) params.set("brand", f.brand);
+  f.brands.forEach((b) => params.append("brand", b));
   f.rarities.forEach((r) => params.append("rarity", r));
   f.conditions.forEach((c) => params.append("condition", c));
   f.stock.forEach((s) => params.append("stock", s));
@@ -76,5 +77,5 @@ export function catalogHref(filter: CatalogFilter, changes: Partial<CatalogFilte
 }
 
 export function activeFilterCount(f: CatalogFilter): number {
-  return (f.q ? 1 : 0) + (f.brand ? 1 : 0) + f.rarities.length + f.conditions.length + f.stock.length;
+  return (f.q ? 1 : 0) + f.brands.length + f.rarities.length + f.conditions.length + f.stock.length;
 }

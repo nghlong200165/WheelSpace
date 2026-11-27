@@ -5,7 +5,8 @@ import { CatalogForm, FilterPanel, FilterSubmitButton } from "@/components/shop/
 import { Pagination } from "@/components/shop/Pagination";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { ChatIcon, SearchIcon } from "@/components/shop/icons";
-import { getBrands, getCatalog, getStoreSettings } from "@/server/queries/storefront";
+import { BrandChips } from "@/components/shop/BrandChips";
+import { getBrandCounts, getCatalog, getStoreSettings } from "@/server/queries/storefront";
 import {
   CATALOG_PAGE_SIZE,
   SORTS,
@@ -38,17 +39,21 @@ export default function ProductsPage({ searchParams }: PageProps<"/products">) {
 function heading(f: CatalogFilter): { eyebrow: string; title: string } {
   const rareOnly = f.rarities.length === 2 && f.rarities.includes("chase") && f.rarities.includes("limited");
   if (f.q) return { eyebrow: "TÌM KIẾM", title: `Kết quả cho “${f.q}”` };
-  if (f.brand) return { eyebrow: rareOnly ? "CHASE & LIMITED" : "HÃNG XE", title: f.brand };
+  if (f.brands.length) {
+    const title = f.brands.length <= 2 ? f.brands.join(" & ") : `${f.brands.slice(0, 2).join(", ")} +${f.brands.length - 2}`;
+    return { eyebrow: rareOnly ? "CHASE & LIMITED" : "HÃNG XE", title };
+  }
   if (rareOnly) return { eyebrow: "PHIÊN BẢN ĐẶC BIỆT", title: "Chase & Limited" };
   return { eyebrow: "BỘ SƯU TẬP", title: "Tất cả sản phẩm" };
 }
 
 async function Catalog({ searchParams }: { searchParams: PageProps<"/products">["searchParams"] }) {
   const filter = parseCatalogParams(await searchParams);
-  const [{ items, total, page, pageCount }, settings, brands] = await Promise.all([
+  const [{ items, total, page, pageCount }, settings, brandCounts] = await Promise.all([
     getCatalog(filter),
     getStoreSettings(),
-    getBrands(),
+    // Counts ignore brand, sort and page, so they share one cache entry per set of other filters.
+    getBrandCounts({ ...filter, brands: [], sort: "newest", page: 1 }),
   ]);
   const { eyebrow, title } = heading(filter);
   const activeCount = activeFilterCount(filter);
@@ -109,21 +114,10 @@ async function Catalog({ searchParams }: { searchParams: PageProps<"/products">[
                 {total === 0 ? "Không có sản phẩm" : `Hiển thị ${from}–${to} / ${total} sản phẩm`}
               </span>
               <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-                <div className="flex items-center gap-3">
-                  <label htmlFor="brand" className="text-[13px] text-muted">
-                    Hãng xe
-                  </label>
-                  <select id="brand" name="brand" defaultValue={filter.brand} className="h-11 max-w-44 border border-line bg-surface px-3 text-sm">
-                    <option value="">Tất cả hãng</option>
-                    {brands.map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
-                    ))}
-                    {/* Keep a brand from an old link selectable even if it has no visible products now. */}
-                    {filter.brand && !brands.includes(filter.brand) && <option value={filter.brand}>{filter.brand}</option>}
-                  </select>
-                </div>
+                {/* Brands are picked with the chips below; keep them when the form is submitted. */}
+                {filter.brands.map((b) => (
+                  <input key={b} type="hidden" name="brand" value={b} />
+                ))}
                 <div className="flex items-center gap-3">
                   <label htmlFor="sort" className="text-[13px] text-muted">
                     Sắp xếp
@@ -143,6 +137,8 @@ async function Catalog({ searchParams }: { searchParams: PageProps<"/products">[
                 </noscript>
               </div>
             </div>
+
+            <BrandChips filter={filter} counts={brandCounts} />
 
             {items.length > 0 ? (
               <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 xl:grid-cols-3">

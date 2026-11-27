@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { Logo } from "@/components/ui/Logo";
 import { AccountLink, AccountLinkFallback } from "./AccountLink";
 import { CartLink } from "./CartLink";
 import { SearchIcon } from "./icons";
@@ -8,8 +9,8 @@ export function SiteHeader() {
   return (
     <header className="border-b border-line">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-10 gap-y-4 px-4 py-5 sm:px-8">
-        <Link href="/" className="text-[15px] font-semibold tracking-brand">
-          WHEELSPACE
+        <Link href="/" aria-label="WheelSpace, về trang chủ" className="group py-1 text-[15px]">
+          <Logo />
         </Link>
         <nav aria-label="Điều hướng chính" className="order-3 flex w-full flex-wrap gap-x-5 gap-y-2 text-xs tracking-eyebrow sm:gap-x-8 sm:order-none sm:w-auto">
           <Link href="/products" className="py-2">

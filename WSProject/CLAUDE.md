@@ -171,7 +171,7 @@ Env được validate trong `src/server/env.ts`. Thêm biến mới thì cập n
 
 - **Đang làm:** Phần 3 làm từng trang theo yêu cầu chủ dự án. Đã xong **trang chủ**, **đăng nhập (SĐT/email + mật khẩu, Google), đăng ký, /account, admin Khách hàng**, **trang danh sách `/products`**. Trang danh sách chờ review. Chủ dự án cần tạo Google OAuth client để thử đăng nhập thật. Wireframe: https://claude.ai/artifact/R7DLqD6UVgxFdshyNYvB2w
 - **Việc tiếp theo** (mỗi trang làm xong phải chờ review):
-  1. Giỏ hàng `/cart` (đọc `useCart()` từ `src/lib/cart.ts`, lấy giá/tồn kho mới nhất từ server). Header và trang chi tiết đang link tới đây.
+  1. Chờ review giỏ hàng `/cart`. Nút đặt hàng đang khóa "Sắp ra mắt" theo yêu cầu chủ dự án.
   2. Phần 4: checkout, trừ kho, COD, payOS mock, tra cứu đơn `/order-lookup`, quản lý đơn (trang `/admin/orders` đang là placeholder).
 - **Còn nợ:** chưa giới hạn số lần đăng nhập sai của **admin** (khách đã có khóa 5 lần sai). Ảnh đang lưu đĩa local nên chưa deploy Vercel được (cần Cloudinary). Các dịch vụ tốn phí xem `docs/THIRD_PARTY_SERVICES.md`.
 - **Git:** `main` chỉ có README. Mọi phần đã làm (khung, admin, trang chủ + slider, đăng nhập/đăng ký, integrations, trang danh sách + dải nút hãng, trang chi tiết + giỏ localStorage) đã ở trên `dev` và đã push (Vercel tự deploy). Chờ chủ dự án test rồi mới merge vào `main`. Thư mục `WheelSpace/Image/` (ảnh thử) cố ý không commit.
@@ -180,6 +180,14 @@ Env được validate trong `src/server/env.ts`. Thêm biến mới thì cập n
 ## 8. Nhật ký phiên
 
 <!-- Mới nhất ở trên. Mỗi phiên 2–4 dòng: đã làm gì, còn dở gì. -->
+
+- **2026-11-27:** Giỏ hàng `/cart` (`src/components/shop/CartView.tsx`):
+  - Giá/tồn kho lấy mới qua Server Action `getCartProductsAction` → `listCartProducts` (không cache, trả cả sản phẩm ẩn với `available: false`). Chỉ gọi lại khi có id mới, đổi số lượng không gọi server.
+  - Số lượng > tồn kho thì tự giảm và báo. Hết hàng / ngừng bán / đã xóa vẫn giữ trong giỏ, mờ đi, không tính tiền; hết hàng có link "Nhắn tin để order".
+  - Tóm tắt: tạm tính, phí ship (miễn phí khi đạt ngưỡng), thanh tiến độ freeship. Nút đặt hàng khóa "Sắp ra mắt", gợi ý chốt đơn qua Messenger/điện thoại.
+  - Ô số lượng (`QuantityInput`, dùng chung trang chi tiết + giỏ) nhập tay được. Nhập/bấm + vượt tồn kho thì báo "Mẫu này chỉ còn N chiếc" rồi đưa về mức tối đa (nút + không khóa nữa). Thêm vào giỏ khi giỏ đã đủ thì báo lý do thay vì khóa nút.
+  - E2E cart 24/24, chi tiết 29/29.
+- **2026-11-27:** Logo mới `src/components/ui/Logo.tsx`: vô lăng đua 3 chấu tự vẽ (SVG, vạch đỏ 12 giờ, không dùng logo hãng nào để tránh bản quyền) + chữ WHEELSPACE. Rê chuột (link có class `group`): vô lăng xoay -30° có nảy, chữ giãn 0.32em → 0.38em (có bản ẩn giữ chỗ nên header không xê dịch), màu cố định ink. Dùng ở header, footer, đăng nhập admin, menu admin. Card sản phẩm: rê chuột thì card nhích lên 4px, hiện nền trắng + bóng mềm (bỏ zoom ảnh), chữ giữ màu đen. Lưu ý: `a:hover { color: accent }` trong `globals.css` không nằm trong layer nên thắng utility Tailwind; muốn giữ màu thì đặt màu trên phần tử con. E2E products 47/48: lỗi còn lại là cảnh báo hydration do Playwright chèn `caret-color` khi chụp màn hình, không phải lỗi app.
 
 - **2026-11-27:** Bộ lọc hãng đổi thành **dải nút trên lưới**:
   - Danh sách hãng cố định ở `src/lib/brands.ts` (admin chọn từ danh sách, có mục "Khác").

@@ -17,16 +17,15 @@ export function RarityBadge({ rarity }: { rarity: ProductDTO["rarity"] }) {
 export function ProductCard({ product, sizes }: { product: ProductDTO; sizes: string }) {
   const cover = product.images[0];
   return (
-    <Link href={`/products/${product.id}`} className="group flex flex-col gap-4">
+    // Hover lifts the card onto a white sheet with a soft shadow. The padding is cancelled by the
+    // negative margin (and fits inside the grid gap) so cards line up as if there were none.
+    <Link
+      href={`/products/${product.id}`}
+      className="relative -m-2 flex flex-col gap-4 p-2 transition-[translate,background-color,box-shadow] duration-300 ease-out hover:z-10 hover:-translate-y-1 hover:bg-surface hover:shadow-[0_14px_32px_rgba(18,18,18,0.10)] focus-visible:-translate-y-1 focus-visible:bg-surface focus-visible:shadow-[0_14px_32px_rgba(18,18,18,0.10)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:-m-3 sm:p-3"
+    >
       <div className="relative aspect-4/3 overflow-hidden bg-placeholder">
         {cover ? (
-          <Image
-            src={cover}
-            alt={product.name}
-            fill
-            sizes={sizes}
-            className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-          />
+          <Image src={cover} alt={product.name} fill sizes={sizes} className="object-cover" />
         ) : (
           <span className="absolute inset-0 flex items-center justify-center text-[11px] tracking-eyebrow text-muted">
             CHƯA CÓ ẢNH
@@ -41,7 +40,8 @@ export function ProductCard({ product, sizes }: { product: ProductDTO; sizes: st
           </span>
         )}
       </div>
-      <div className="flex flex-col gap-1.5">
+      {/* Explicit ink: the global red link hover would otherwise tint the text. */}
+      <div className="flex flex-col gap-1.5 text-ink">
         <span className="text-[11px] tracking-[0.14em] text-muted">
           {product.code} · {CONDITION_LABELS[product.condition]}
         </span>

@@ -6,6 +6,7 @@ import { storage } from "../integrations/storage";
 import { ServiceError } from "./errors";
 import {
   MAX_PRODUCT_IMAGES,
+  type CartProductDTO,
   type Condition,
   type ProductDTO,
   type ProductInput,
@@ -208,6 +209,30 @@ export async function listVisibleProductsByIds(ids: string[]): Promise<ProductDT
   return valid.flatMap((id) => {
     const doc = byId.get(id);
     return doc ? [toDTO(doc)] : [];
+  });
+}
+
+// Storefront cart: current price and stock for the given ids. Hidden products are returned too
+// (available: false) so the cart can say why they can't be bought; deleted ids are just missing.
+export async function listCartProducts(ids: string[]): Promise<CartProductDTO[]> {
+  const valid = [...new Set(ids.filter((id) => isValidObjectId(id)))];
+  if (valid.length === 0) return [];
+  await connectDb();
+  const docs = await Product.find({ _id: { $in: valid } })
+    .select("code name brand price stock images isVisible")
+    .lean<LeanProduct[]>();
+  return docs.map((doc) => {
+    const available = doc.isVisible ?? true;
+    return {
+      id: doc._id.toString(),
+      code: doc.code,
+      name: doc.name,
+      brand: isBrand(doc.brand ?? "") ? (doc.brand as Brand) : "Khác",
+      price: doc.price,
+      stock: available ? doc.stock : 0,
+      image: doc.images?.[0] ?? null,
+      available,
+    };
   });
 }
 

@@ -48,3 +48,9 @@ export type ProductDTO = ProductInput & {
   createdAt: string;
   updatedAt: string;
 };
+
+// What the cart page needs per line. `available` is false for products hidden by the admin.
+export type CartProductDTO = Pick<ProductDTO, "id" | "code" | "name" | "brand" | "price" | "stock"> & {
+  image: string | null;
+  available: boolean;
+};

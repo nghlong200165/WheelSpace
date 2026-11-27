@@ -14,6 +14,7 @@ import {
 } from "@/lib/schemas/product";
 import type { CatalogFilter } from "@/lib/schemas/catalog";
 import { isBrand, type Brand } from "@/lib/brands";
+import { productSlug, slugify } from "@/lib/slug";
 
 type LeanProduct = ProductDoc & { _id: Types.ObjectId; createdAt: Date; updatedAt: Date };
 
@@ -158,11 +159,25 @@ export async function listProductsForStore(
 }
 
 // Storefront product page: hidden or unknown products are "not found".
-export async function getVisibleProduct(id: string): Promise<ProductDTO | null> {
-  if (!isValidObjectId(id)) return null;
+// Storefront product page. The slug ends with the slugified code, so this matches every tail of the
+// slug against the codes and keeps the longest hit: renamed products still resolve from old links.
+// Old /products/<id> links resolve too; the page redirects both to the current slug.
+export async function getVisibleProductBySlug(slug: string): Promise<ProductDTO | null> {
+  if (slug.length > 200) return null;
   await connectDb();
-  const doc = await Product.findOne({ _id: id, isVisible: true }).lean<LeanProduct>();
-  return doc ? toDTO(doc) : null;
+  if (/^[a-f0-9]{24}$/.test(slug)) {
+    const doc = await Product.findOne({ _id: slug, isVisible: true }).lean<LeanProduct>();
+    if (doc) return toDTO(doc);
+  }
+  // slugify leaves only [a-z0-9-], so the tails are safe inside the patterns below.
+  const parts = slugify(slug).split("-").filter(Boolean);
+  const tails = parts.map((_, i) => parts.slice(i).join("-"));
+  if (tails.length === 0) return null;
+  // Codes are free text ("MGT 001", "mgt-001"): any run of other characters stands for one "-".
+  const patterns = tails.map((tail) => new RegExp(`^[^a-z0-9]*${tail.split("-").join("[^a-z0-9]+")}[^a-z0-9]*$`, "i"));
+  const docs = await Product.find({ isVisible: true, code: { $in: patterns } }).lean<LeanProduct[]>();
+  const best = tails.map((tail) => docs.find((d) => slugify(d.code) === tail)).find(Boolean);
+  return best ? toDTO(best) : null;
 }
 
 // "Có thể bạn cũng thích": same brand first, then same rarity, then newest; in-stock first.
@@ -234,6 +249,16 @@ export async function listCartProducts(ids: string[]): Promise<CartProductDTO[]>
       available,
     };
   });
+}
+
+// sitemap.xml: every visible product's current slug and last edit.
+export async function listSitemapProducts(): Promise<{ slug: string; updatedAt: string }[]> {
+  await connectDb();
+  const docs = await Product.find({ isVisible: true })
+    .select("name code updatedAt")
+    .sort({ updatedAt: -1 })
+    .lean<LeanProduct[]>();
+  return docs.map((d) => ({ slug: productSlug(d), updatedAt: d.updatedAt.toISOString() }));
 }
 
 export async function getProductStats(): Promise<{ total: number; outOfStock: number; hidden: number }> {

@@ -1,21 +1,19 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
+import Script from "next/script";
+import { HERO_SEEN_SCRIPT } from "@/lib/hero-seen";
+import { SITE_URL } from "@/lib/site-url";
 import "./globals.css";
 
 const beVietnamPro = Be_Vietnam_Pro({
   variable: "--font-be-vietnam-pro",
   subsets: ["latin", "vietnamese"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["200", "300", "400", "500", "600"],
 });
 
-// Absolute base for share-preview images (Facebook / Messenger need full URLs).
-// APP_URL when set, else the Vercel production domain, else local dev.
-const siteUrl =
-  process.env.APP_URL ||
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
-
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  // Absolute base for share-preview images (Facebook / Messenger need full URLs).
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "WheelSpace · Mô hình Mini GT 1:64",
     template: "%s · WheelSpace",
@@ -25,8 +23,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="vi" className={`${beVietnamPro.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col font-sans">{children}</body>
+    // suppressHydrationWarning: the hero-seen script may add a class before React hydrates.
+    <html lang="vi" className={`${beVietnamPro.variable} h-full antialiased`} suppressHydrationWarning>
+      <body className="flex min-h-full flex-col font-sans">
+        <Script id="hero-seen" strategy="beforeInteractive">
+          {HERO_SEEN_SCRIPT}
+        </Script>
+        {children}
+      </body>
     </html>
   );
 }

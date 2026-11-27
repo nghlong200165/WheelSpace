@@ -1,20 +1,29 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
+import { RoadLoader } from "@/components/motion/MiniCar";
 import { AddToCart } from "@/components/shop/AddToCart";
 import { ProductCard, RarityBadge } from "@/components/shop/ProductCard";
 import { ProductGallery } from "@/components/shop/ProductGallery";
 import { WishlistButton } from "@/components/shop/WishlistButton";
 import { WishlistSlot } from "@/components/shop/WishlistSlot";
 import { ChatIcon } from "@/components/shop/icons";
-import { getProduct, getRelatedProducts, getStoreSettings } from "@/server/queries/storefront";
+import { getProductBySlug, getRelatedProducts, getStoreSettings } from "@/server/queries/storefront";
 import { formatVnd } from "@/lib/format";
+import { productHref, productSlug } from "@/lib/slug";
 import { CONDITION_LABELS, RARITY_LABELS, type ProductDTO } from "@/lib/schemas/product";
 
-export async function generateMetadata({ params }: PageProps<"/products/[id]">): Promise<Metadata> {
-  const { id } = await params;
-  const product = await getProduct(id);
+// Old ids and outdated slugs (product renamed) move permanently to the current slug.
+async function loadProduct(params: PageProps<"/products/[slug]">["params"]) {
+  const { slug } = await params;
+  const product = await getProductBySlug(slug);
+  if (product && productSlug(product) !== slug) permanentRedirect(productHref(product));
+  return product;
+}
+
+export async function generateMetadata({ params }: PageProps<"/products/[slug]">): Promise<Metadata> {
+  const product = await loadProduct(params);
   if (!product) return { title: "Không tìm thấy sản phẩm" };
   const description = `${product.brand} · ${product.code} · ${CONDITION_LABELS[product.condition]} · ${formatVnd(product.price)}${
     product.stock === 0 ? " · Nhận order" : ""
@@ -22,6 +31,7 @@ export async function generateMetadata({ params }: PageProps<"/products/[id]">):
   return {
     title: `${product.name} · ${product.code}`,
     description,
+    alternates: { canonical: productHref(product) },
     openGraph: {
       title: product.name,
       description,
@@ -31,10 +41,10 @@ export async function generateMetadata({ params }: PageProps<"/products/[id]">):
   };
 }
 
-export default function ProductPage({ params }: PageProps<"/products/[id]">) {
+export default function ProductPage({ params }: PageProps<"/products/[slug]">) {
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col px-4 pt-6 sm:px-8 sm:pt-8">
-      {/* The id comes from the URL, which is only known at request time. */}
+      {/* The slug comes from the URL, which is only known at request time. */}
       <Suspense fallback={<ProductSkeleton />}>
         <ProductDetail params={params} />
       </Suspense>
@@ -42,10 +52,10 @@ export default function ProductPage({ params }: PageProps<"/products/[id]">) {
   );
 }
 
-async function ProductDetail({ params }: { params: PageProps<"/products/[id]">["params"] }) {
-  const { id } = await params;
-  const product = await getProduct(id);
+async function ProductDetail({ params }: { params: PageProps<"/products/[slug]">["params"] }) {
+  const product = await loadProduct(params);
   if (!product) notFound();
+  const href = productHref(product);
   const [related, settings] = await Promise.all([getRelatedProducts(product, 4), getStoreSettings()]);
   const soldOut = product.stock === 0;
 
@@ -100,8 +110,8 @@ async function ProductDetail({ params }: { params: PageProps<"/products/[id]">["
                 <AddToCart productId={product.id} stock={product.stock} />
               </>
             )}
-            <Suspense fallback={<WishlistButton productId={product.id} saved={false} loginNext={`/products/${product.id}`} />}>
-              <WishlistSlot productId={product.id} />
+            <Suspense fallback={<WishlistButton productId={product.id} saved={false} loginNext={href} />}>
+              <WishlistSlot productId={product.id} loginNext={href} />
             </Suspense>
           </div>
 
@@ -125,8 +135,8 @@ async function ProductDetail({ params }: { params: PageProps<"/products/[id]">["
         <section className="flex flex-col gap-8 pt-24">
           <h2 className="text-2xl font-light">Có thể bạn cũng thích</h2>
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 lg:grid-cols-4">
-            {related.map((p) => (
-              <ProductCard key={p.id} product={p} sizes="(min-width: 1024px) 25vw, 50vw" />
+            {related.map((p, i) => (
+              <ProductCard key={p.id} product={p} index={i} sizes="(min-width: 1024px) 25vw, 50vw" />
             ))}
           </div>
         </section>
@@ -188,7 +198,9 @@ function SoldOutBox({ messengerUrl, phone }: { messengerUrl: string; phone: stri
 function ProductSkeleton() {
   return (
     <div className="flex flex-col gap-10 pt-14 lg:flex-row lg:gap-16" aria-hidden="true">
-      <div className="aspect-4/3 bg-placeholder lg:flex-[1.15]" />
+      <div className="relative aspect-4/3 lg:flex-[1.15]">
+        <RoadLoader />
+      </div>
       <div className="flex flex-col gap-4 lg:flex-1">
         <div className="h-4 w-40 bg-placeholder" />
         <div className="h-10 w-3/4 bg-placeholder" />

@@ -3,12 +3,13 @@ import { cacheLife, cacheTag } from "next/cache";
 import { CACHE_TAGS } from "../cache-tags";
 import {
   countProductsByBrand,
-  getVisibleProduct,
+  getVisibleProductBySlug,
   listBannerProducts,
   listNewArrivals,
   listProductsForStore,
   listRelatedProducts,
   listRareProducts,
+  listSitemapProducts,
 } from "../services/products";
 import { CATALOG_PAGE_SIZE, type CatalogFilter } from "@/lib/schemas/catalog";
 import type { ProductDTO } from "@/lib/schemas/product";
@@ -53,11 +54,18 @@ export async function getBrandCounts(filter: CatalogFilter) {
   return countProductsByBrand(filter);
 }
 
-export async function getProduct(id: string) {
+export async function getProductBySlug(slug: string) {
   "use cache";
   cacheTag(CACHE_TAGS.products);
   cacheLife("hours");
-  return getVisibleProduct(id);
+  return getVisibleProductBySlug(slug);
+}
+
+export async function getSitemapProducts() {
+  "use cache";
+  cacheTag(CACHE_TAGS.products);
+  cacheLife("hours");
+  return listSitemapProducts();
 }
 
 export async function getRelatedProducts(product: Pick<ProductDTO, "id" | "brand" | "rarity">, limit = 4) {

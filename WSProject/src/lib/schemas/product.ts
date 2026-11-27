@@ -23,7 +23,8 @@ export const CONDITION_LABELS: Record<Condition, string> = {
 
 // Input accepted by the admin "create/update product" form.
 export const productInputSchema = z.object({
-  code: z.string().trim().min(1, "Nhập mã sản phẩm").max(32),
+  // Must contain a letter or digit: the code ends the product's URL slug.
+  code: z.string().trim().min(1, "Nhập mã sản phẩm").max(32).regex(/[a-z0-9]/i, "Mã phải có chữ hoặc số"),
   name: z.string().trim().min(1, "Nhập tên sản phẩm").max(160),
   // Car maker from the fixed list in src/lib/brands.ts (storefront "Hãng xe" filter).
   brand: z.enum(BRANDS, { error: "Chọn hãng xe" }),

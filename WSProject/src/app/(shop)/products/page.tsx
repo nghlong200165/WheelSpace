@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { RoadLoader } from "@/components/motion/MiniCar";
 import { CatalogForm, FilterPanel, FilterSubmitButton } from "@/components/shop/CatalogForm";
 import { Pagination } from "@/components/shop/Pagination";
 import { ProductCard } from "@/components/shop/ProductCard";
@@ -142,8 +143,8 @@ async function Catalog({ searchParams }: { searchParams: PageProps<"/products">[
 
             {items.length > 0 ? (
               <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 xl:grid-cols-3">
-                {items.map((p) => (
-                  <ProductCard key={p.id} product={p} sizes="(min-width: 1280px) 300px, (min-width: 1024px) 30vw, 50vw" />
+                {items.map((p, i) => (
+                  <ProductCard key={p.id} product={p} index={i} sizes="(min-width: 1280px) 300px, (min-width: 1024px) 30vw, 50vw" />
                 ))}
               </div>
             ) : (
@@ -211,7 +212,9 @@ function CatalogSkeleton() {
       <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 xl:grid-cols-3 lg:ml-72">
         {Array.from({ length: 6 }, (_, i) => (
           <div key={i} className="flex flex-col gap-4">
-            <div className="aspect-4/3 bg-placeholder" />
+            <div className="relative aspect-4/3">
+              <RoadLoader delay={(i % 3) * 0.35} />
+            </div>
             <div className="h-4 w-2/3 bg-placeholder" />
           </div>
         ))}

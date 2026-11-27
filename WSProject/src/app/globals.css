@@ -27,3 +27,213 @@ body {
 a:hover {
   color: var(--color-accent);
 }
+
+/* ---------- Motion (see CLAUDE.md "Hiệu ứng"). Everything here switches off for reduced motion. ---------- */
+
+:root {
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Scroll reveal: [data-reveal] starts hidden once RevealObserver has added .reveal-ready to <html>
+   (so content stays visible if JavaScript never runs); RevealObserver fades it in with
+   element.animate() when it enters the viewport. */
+.reveal-ready [data-reveal] {
+  opacity: 0;
+  transform: translateY(32px);
+}
+
+/* Primary button: red sweeps in from the left, the arrow nudges right, a press sinks it. */
+.btn-sweep {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+.btn-sweep::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.55s var(--ease-in-out);
+}
+.btn-sweep:hover::before,
+.btn-sweep:focus-visible::before {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+.btn-sweep:hover,
+.btn-sweep:focus-visible {
+  color: #fff;
+}
+.btn-sweep svg {
+  transition: transform 0.45s var(--ease-out-expo);
+}
+.btn-sweep:hover svg {
+  transform: translateX(5px);
+}
+.btn-sweep:active {
+  transform: scale(0.97);
+}
+.btn-sweep:disabled::before {
+  display: none;
+}
+
+/* Spec plate shown instead of a photo: dark, with fine diagonal lines. */
+.spec-plate {
+  background: radial-gradient(120% 90% at 85% 10%, #3a3a3a 0%, #161616 55%, #0b0b0b 100%);
+}
+.spec-plate::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(115deg, transparent 0 22px, rgb(255 255 255 / 0.025) 22px 23px);
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes bump {
+  40% {
+    transform: scale(1.5);
+  }
+}
+
+/* Cars: spinning wheels, road loader, route progress bar, hero entry. */
+.car-wheel {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: car-spin 0.35s linear infinite;
+}
+@keyframes car-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.road-dash {
+  background: repeating-linear-gradient(90deg, #cfcbc2 0 14px, transparent 14px 26px);
+  animation: road-dash 0.5s linear infinite;
+}
+@keyframes road-dash {
+  to {
+    background-position: -26px 0;
+  }
+}
+.car-drive {
+  left: -60px;
+  animation: car-drive 2.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+@keyframes car-drive {
+  to {
+    left: calc(100% + 10px);
+  }
+}
+
+/* RouteProgress sets data-phase; html[data-navigating] dims the page while waiting. */
+.route-progress {
+  width: 0;
+  opacity: 0;
+}
+.route-progress[data-phase="run"] {
+  width: 82%;
+  opacity: 1;
+  transition:
+    width 2.4s cubic-bezier(0.08, 0.82, 0.17, 1),
+    opacity 0.2s;
+}
+.route-progress[data-phase="done"] {
+  width: 100%;
+  opacity: 1;
+  transition: width 0.35s ease-out;
+}
+.route-progress[data-phase="fade"] {
+  width: 100%;
+  opacity: 0;
+  transition: opacity 0.4s 0.1s;
+}
+main {
+  transition: opacity 0.3s;
+}
+html[data-navigating] main {
+  opacity: 0.6;
+}
+
+/* Home hero entry, first visit of the session only: html.hero-seen (set by an inline script in
+   the root layout, and after the first run) switches it off. */
+html:not(.hero-seen) [data-hero="line"] > span {
+  animation: hero-rise 1s var(--ease-out-expo) both;
+}
+html:not(.hero-seen) [data-hero="line"]:nth-child(2) > span {
+  animation-delay: 0.1s;
+}
+html:not(.hero-seen) [data-hero="fade"] {
+  animation: hero-fade 0.9s var(--ease-out-expo) both;
+  animation-delay: calc(0.05s + var(--i, 0) * 0.12s);
+}
+html:not(.hero-seen) [data-hero="frame"] {
+  animation: hero-corner 1.15s var(--ease-out-expo) both;
+}
+html:not(.hero-seen) [data-hero="frame"] img {
+  animation: hero-settle 1.6s var(--ease-out-expo) both;
+}
+html:not(.hero-seen) [data-hero="streak"] {
+  animation: hero-streak 0.9s cubic-bezier(0.5, 0, 0.2, 1) 0.15s both;
+}
+@keyframes hero-rise {
+  from {
+    transform: translateY(105%);
+  }
+}
+@keyframes hero-fade {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes hero-corner {
+  from {
+    clip-path: inset(0 0 0 100%);
+    transform: translateX(70px) skewX(-6deg);
+  }
+  60% {
+    transform: translateX(-6px) skewX(1deg);
+  }
+  to {
+    clip-path: inset(0);
+    transform: none;
+  }
+}
+@keyframes hero-settle {
+  from {
+    transform: scale(1.18) translateX(4%);
+  }
+}
+@keyframes hero-streak {
+  0% {
+    left: -40%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    left: 110%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+}

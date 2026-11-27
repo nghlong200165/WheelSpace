@@ -181,6 +181,25 @@ Env được validate trong `src/server/env.ts`. Thêm biến mới thì cập n
 
 <!-- Mới nhất ở trên. Mỗi phiên 2–4 dòng: đã làm gì, còn dở gì. -->
 
+- **2026-11-27:** Tải trang có xe chạy (chủ dự án chọn 1+2+3 sau bản xem thử, **bỏ intro chặn màn hình** vì làm chậm khách và điểm SEO):
+  - `RouteProgress` (`src/components/motion/`): vạch đỏ mép trên có xe 1:64 (`MiniCar`) ở đầu vạch. App Router không có sự kiện bắt đầu chuyển trang nên bắt click link nội bộ + submit form GET, xong khi pathname/query đổi; chỉ hiện nếu chờ quá 120ms, tự tắt sau 10s. Trong lúc chờ `<main>` mờ đi (`html[data-navigating]`).
+  - Hero trang chủ "vào cua" chỉ lần ghé đầu mỗi phiên: script `beforeInteractive` trong root layout (`src/lib/hero-seen.ts`) thêm `html.hero-seen` nếu sessionStorage đã đánh dấu; `<html>` có `suppressHydrationWarning`. Tiêu đề hiện từng dòng (có padding để dấu tiếng Việt không bị cắt), khung ảnh trượt vào + vệt sáng.
+  - Khung đang tải (danh sách, chi tiết, giỏ) dùng `RoadLoader`: vạch đường chạy + xe chạy ngang.
+  - Sửa: `RevealObserver` đổi từ thêm class sang `element.animate()` vì phần tử stream về có thể lọt vào màn hình trước khi React hydrate, đổi className gây hydration mismatch. Font thêm độ đậm 200 (chữ `font-extralight`).
+  - E2E: chi tiết 34/34, cart 24/24, danh sách 47/48 (cảnh báo do Playwright chèn `caret-color` khi chụp màn hình).
+
+- **2026-11-27:** Hiệu ứng chuyển động (học tinh thần web hãng xe, không sao chép). Chủ dự án duyệt qua bản xem thử, **giữ nguyên hero cũ**.
+  - Dùng chung: `RevealObserver` (phần tử có `data-reveal` hiện dần khi cuộn, `--i` để so le), header dính + mờ kính khi cuộn (**không co chiều cao**, vì co làm nội dung giật và hỏng test giữ vị trí cuộn), menu có gạch đỏ trượt (`MainNav`), class `btn-sweep` (đỏ tràn từ trái), CSS ở cuối `globals.css`, tự tắt khi bật giảm chuyển động.
+  - Card: zoom ảnh, thanh "XEM CHI TIẾT" trượt lên, nút + thêm nhanh (`QuickAdd`, nằm ngoài thẻ `<a>`), xe chưa có ảnh hiện `SpecPlate`. Thêm vào giỏ: ảnh bay vào icon giỏ (`src/lib/fly-to-cart.ts`, đích là `[data-cart-target]`), số trên giỏ nảy, `CartToast` ở đáy màn hình (trang chi tiết chỉ bay, giữ dòng báo cũ).
+  - Trang chủ (`src/components/home/`): chữ khổng lồ trôi theo cuộn, dải tên hãng chạy ngang (chỉ hãng có hàng), băng chuyền "Mới về" (8 mẫu, kéo được), khu Chase & Limited nền đen có đốm sáng theo chuột + card nghiêng, khối nhận order 3 bước.
+  - E2E: chi tiết 34/34, cart 24/24, danh sách 47/48 (cảnh báo do Playwright). Các bài Google trong `customer.mjs` cần `GOOGLE_CLIENT_ID` (`.env.local` chưa có), không liên quan thay đổi này.
+
+- **2026-11-27:** Link SEO cho trang chi tiết: `/products/mini-gt-<tên-xe>-<mã>` (`src/lib/slug.ts`, route đổi thành `products/[slug]`).
+  - Không lưu slug trong DB: `getVisibleProductBySlug` so từng đuôi của slug với mã sản phẩm (đã slugify), lấy đuôi dài nhất. Đổi tên xe thì link cũ vẫn tìm ra và chuyển sang slug mới; link cũ `/products/<id>` cũng chuyển. Chuyển hướng là `permanentRedirect` (308) nhưng do streaming nên trả 200 + `meta refresh`, kèm `canonical`.
+  - Mã sản phẩm bắt buộc có chữ hoặc số. Thêm `sitemap.xml` (trang chủ, /products, mọi xe đang hiện) và `robots.txt` (chặn admin, account, cart, login, register, auth, api). `SITE_URL` gom ở `src/lib/site-url.ts`.
+  - E2E chi tiết 34/34, cart 24/24, danh sách 47/48 (cảnh báo hydration do Playwright).
+  - Dev server (Turbopack) hay giữ bản cũ khi đổi tên thư mục route hoặc thêm export mới. Gặp lỗi lạ thì khởi động lại `npm run dev` trước khi sửa code.
+
 - **2026-11-27:** Giỏ hàng `/cart` (`src/components/shop/CartView.tsx`):
   - Giá/tồn kho lấy mới qua Server Action `getCartProductsAction` → `listCartProducts` (không cache, trả cả sản phẩm ẩn với `available: false`). Chỉ gọi lại khi có id mới, đổi số lượng không gọi server.
   - Số lượng > tồn kho thì tự giảm và báo. Hết hàng / ngừng bán / đã xóa vẫn giữ trong giỏ, mờ đi, không tính tiền; hết hàng có link "Nhắn tin để order".

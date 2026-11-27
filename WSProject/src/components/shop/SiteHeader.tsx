@@ -3,26 +3,18 @@ import { Suspense } from "react";
 import { Logo } from "@/components/ui/Logo";
 import { AccountLink, AccountLinkFallback } from "./AccountLink";
 import { CartLink } from "./CartLink";
+import { MainNav } from "./MainNav";
+import { StickyHeader } from "./StickyHeader";
 import { SearchIcon } from "./icons";
 
 export function SiteHeader() {
   return (
-    <header className="border-b border-line">
+    <StickyHeader>
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-10 gap-y-4 px-4 py-5 sm:px-8">
         <Link href="/" aria-label="WheelSpace, về trang chủ" className="group py-1 text-[15px]">
           <Logo />
         </Link>
-        <nav aria-label="Điều hướng chính" className="order-3 flex w-full flex-wrap gap-x-5 gap-y-2 text-xs tracking-eyebrow sm:gap-x-8 sm:order-none sm:w-auto">
-          <Link href="/products" className="py-2">
-            SẢN PHẨM
-          </Link>
-          <Link href="/products?rarity=rare" className="py-2">
-            CHASE &amp; LIMITED
-          </Link>
-          <Link href="/order-lookup" className="py-2">
-            TRA CỨU ĐƠN
-          </Link>
-        </nav>
+        <MainNav />
         <div className="flex items-center sm:gap-4">
           <Link href="/products" aria-label="Tìm kiếm" className="flex p-3">
             <SearchIcon />
@@ -33,6 +25,6 @@ export function SiteHeader() {
           <CartLink />
         </div>
       </div>
-    </header>
+    </StickyHeader>
   );
 }

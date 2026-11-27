@@ -13,7 +13,7 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
 
   if (count === 0) {
     return (
-      <div className="relative flex aspect-4/3 items-center justify-center bg-placeholder">
+      <div data-gallery-main className="relative flex aspect-4/3 items-center justify-center bg-placeholder">
         <span className="text-xs tracking-eyebrow text-muted">CHƯA CÓ ẢNH</span>
       </div>
     );
@@ -37,6 +37,7 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
   return (
     <div className="flex flex-col gap-3" aria-roledescription="carousel" aria-label={`Ảnh ${name}`}>
       <div
+        data-gallery-main
         className="group/gallery relative aspect-4/3 overflow-hidden bg-placeholder outline-none focus-visible:ring-2 focus-visible:ring-ink"
         tabIndex={count > 1 ? 0 : -1}
         onKeyDown={onKeyDown}

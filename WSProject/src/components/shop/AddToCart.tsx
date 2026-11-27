@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { addToCart, useCart } from "@/lib/cart";
+import { flyToCart } from "@/lib/fly-to-cart";
 import { QuantityInput } from "./QuantityInput";
 
 // Quantity picker + "Thêm vào giỏ". Never lets the cart exceed the stock shown on the page
@@ -27,6 +28,7 @@ export function AddToCart({ productId, stock }: { productId: string; stock: numb
       return;
     }
     const added = addToCart(productId, qty, stock);
+    flyToCart(document.querySelector("[data-gallery-main]"));
     setMessage(`Đã thêm ${added} sản phẩm vào giỏ.`);
     setWarning(null);
     setQuantity(1);
@@ -48,7 +50,7 @@ export function AddToCart({ productId, stock }: { productId: string; stock: numb
         <button
           type="button"
           onClick={add}
-          className="min-h-13 flex-[1_1_200px] cursor-pointer bg-ink px-6 text-[13px] tracking-[0.12em] text-white"
+          className="btn-sweep min-h-13 flex-[1_1_200px] cursor-pointer bg-ink px-6 text-[13px] tracking-[0.12em] text-white"
         >
           THÊM VÀO GIỎ
         </button>

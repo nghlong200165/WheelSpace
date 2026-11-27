@@ -3,9 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { RoadLoader } from "@/components/motion/MiniCar";
 import { getCartProductsAction } from "@/server/actions/cart";
 import { setCartQuantity, useCart, type CartLine } from "@/lib/cart";
 import { formatVnd } from "@/lib/format";
+import { productHref } from "@/lib/slug";
 import type { CartProductDTO } from "@/lib/schemas/product";
 import { ChatIcon } from "./icons";
 import { QuantityInput } from "./QuantityInput";
@@ -180,7 +182,9 @@ function CartRow({
   if (product === undefined) {
     return (
       <li className="flex gap-4 border-b border-line py-6 sm:gap-6" aria-hidden="true">
-        <div className="aspect-4/3 w-24 shrink-0 bg-placeholder sm:w-32" />
+        <div className="relative aspect-4/3 w-24 shrink-0 sm:w-32">
+          <RoadLoader />
+        </div>
         <div className="flex flex-1 flex-col gap-2.5">
           <div className="h-3 w-24 bg-placeholder" />
           <div className="h-4 w-3/4 bg-placeholder" />
@@ -209,7 +213,7 @@ function CartRow({
   }
 
   const buyable = isBuyable(product);
-  const href = `/products/${product.id}`;
+  const href = productHref(product);
   const orderLink = messengerUrl || (contactPhone ? `tel:${contactPhone.replace(/\s/g, "")}` : "");
 
   return (
@@ -320,7 +324,9 @@ function CartSkeleton() {
       <div className="flex flex-col gap-6 border-t border-line pt-6 lg:flex-[1.6]">
         {[0, 1].map((i) => (
           <div key={i} className="flex gap-6">
-            <div className="aspect-4/3 w-24 bg-placeholder sm:w-32" />
+            <div className="relative aspect-4/3 w-24 sm:w-32">
+              <RoadLoader delay={i * 0.35} />
+            </div>
             <div className="flex flex-1 flex-col gap-2.5">
               <div className="h-3 w-24 bg-placeholder" />
               <div className="h-4 w-3/4 bg-placeholder" />

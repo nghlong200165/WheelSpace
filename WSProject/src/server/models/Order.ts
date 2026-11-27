@@ -34,6 +34,11 @@ const orderSchema = new Schema(
     paymentMethod: { type: String, enum: PAYMENT_METHODS, required: true },
     paymentStatus: { type: String, enum: PAYMENT_STATUSES, required: true },
     status: { type: String, enum: ORDER_STATUSES, required: true, default: "pending" },
+    // When each status was reached (the order lookup shows these dates). The admin appends on change.
+    statusHistory: {
+      type: [{ status: { type: String, enum: ORDER_STATUSES, required: true }, at: { type: Date, required: true }, _id: false }],
+      default: [],
+    },
     // payOS requires a numeric order code; kept separate from our human-readable code.
     payosOrderCode: { type: Number, default: null },
     // Unpaid payOS orders are cancelled and their stock restored after this time.

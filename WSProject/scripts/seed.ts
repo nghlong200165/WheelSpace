@@ -1,4 +1,4 @@
-// Seeds the database with default settings and sample products.
+// Seeds the database with default settings, sample products and sample orders.
 //
 //   npm run db:seed            # creates collections/indexes, adds data only if empty
 //   npm run db:seed -- --reset # wipes products + orders first (local databases only)
@@ -11,6 +11,7 @@ import { SETTINGS_KEY, Settings } from "@/server/models/Settings";
 import { User } from "@/server/models/User";
 import { productInputSchema, type ProductInput } from "@/lib/schemas/product";
 import { DEFAULT_SETTINGS } from "@/lib/schemas/settings";
+import type { OrderStatus } from "@/lib/schemas/order";
 
 type SampleProduct = Pick<ProductInput, "code" | "name" | "brand" | "price" | "rarity" | "condition" | "stock"> &
   Partial<ProductInput>;
@@ -68,6 +69,95 @@ async function main() {
     await Product.insertMany(docs);
     console.log(`Products: inserted ${docs.length} samples`);
   }
+
+  await seedSampleOrders();
+}
+
+// Sample orders for trying the order lookup before checkout exists: one per status, all with the
+// same phone. Added only when missing; real orders are never touched.
+const SAMPLE_PHONE = "0901234567";
+const SAMPLE_ORDERS: {
+  code: string;
+  items: [productCode: string, quantity: number][];
+  paymentMethod: "cod" | "payos";
+  paymentStatus: "unpaid" | "paid";
+  // Hours ago each status was reached, in order; the last one is the current status.
+  history: [status: OrderStatus, hoursAgo: number][];
+}[] = [
+  { code: "WS-DEMO-01", items: [["MGT-DEMO-01", 1]], paymentMethod: "cod", paymentStatus: "unpaid", history: [["pending", 2]] },
+  {
+    code: "WS-DEMO-02",
+    items: [["MGT-DEMO-02", 1], ["MGT-DEMO-09", 1]],
+    paymentMethod: "payos",
+    paymentStatus: "paid",
+    history: [["pending", 26], ["confirmed", 20]],
+  },
+  {
+    code: "WS-DEMO-03",
+    items: [["MGT-DEMO-07", 1]],
+    paymentMethod: "cod",
+    paymentStatus: "unpaid",
+    history: [["pending", 72], ["confirmed", 60], ["shipping", 24]],
+  },
+  {
+    code: "WS-DEMO-04",
+    items: [["MGT-DEMO-04", 1]],
+    paymentMethod: "payos",
+    paymentStatus: "paid",
+    history: [["pending", 144], ["confirmed", 140], ["shipping", 96], ["completed", 48]],
+  },
+  {
+    code: "WS-DEMO-05",
+    items: [["MGT-DEMO-09", 2]],
+    paymentMethod: "cod",
+    paymentStatus: "unpaid",
+    history: [["pending", 96], ["confirmed", 91], ["cancelled", 84]],
+  },
+];
+
+async function seedSampleOrders() {
+  const shippingFee = DEFAULT_SETTINGS.shippingFee;
+  let added = 0;
+  for (const sample of SAMPLE_ORDERS) {
+    if (await Order.exists({ code: sample.code })) continue;
+    const products = await Product.find({ code: { $in: sample.items.map(([code]) => code) } }).lean();
+    const items = sample.items.flatMap(([code, quantity]) => {
+      const p = products.find((x) => x.code === code);
+      return p ? [{ product: p._id, code: p.code, name: p.name, price: p.price, quantity, image: p.images?.[0] ?? null }] : [];
+    });
+    if (items.length === 0) continue;
+
+    const at = (hoursAgo: number) => new Date(Date.now() - hoursAgo * 3_600_000);
+    const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const order = new Order({
+      code: sample.code,
+      customer: {
+        name: "Khách Demo",
+        phone: SAMPLE_PHONE,
+        province: "TP. Hồ Chí Minh",
+        ward: "Phường Bến Nghé",
+        address: "12 Lê Lợi",
+      },
+      items,
+      subtotal,
+      shippingFee,
+      total: subtotal + shippingFee,
+      paymentMethod: sample.paymentMethod,
+      paymentStatus: sample.paymentStatus,
+      status: sample.history.at(-1)![0],
+      statusHistory: sample.history.map(([status, hoursAgo]) => ({ status, at: at(hoursAgo) })),
+      createdAt: at(sample.history[0][1]),
+      updatedAt: at(sample.history.at(-1)![1]),
+    });
+    // Keep the back-dated createdAt/updatedAt instead of "now".
+    await order.save({ timestamps: false });
+    added++;
+  }
+  console.log(
+    added
+      ? `Orders: added ${added} samples (codes WS-DEMO-01..05, phone ${SAMPLE_PHONE})`
+      : "Orders: samples already exist, kept",
+  );
 }
 
 main()

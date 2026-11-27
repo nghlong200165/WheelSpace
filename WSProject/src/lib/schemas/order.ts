@@ -59,9 +59,30 @@ export const checkoutInputSchema = z.object({
 export type CheckoutInput = z.infer<typeof checkoutInputSchema>;
 
 export const orderLookupSchema = z.object({
-  code: z.string().trim().toUpperCase().min(1, "Nhập mã đơn"),
+  code: z.string().trim().toUpperCase().min(1, "Nhập mã đơn").max(40),
   phone: phoneSchema,
 });
+
+// "+84901234567" and "0901234567" are the same number.
+export function normalizePhone(phone: string): string {
+  return phone.trim().replace(/\s/g, "").replace(/^\+84/, "0");
+}
+
+// What the public order lookup shows: anyone with the code + phone can see it, so the recipient
+// is masked (no street address, phone shortened).
+export type OrderLookupDTO = {
+  code: string;
+  status: OrderStatus;
+  statusHistory: { status: OrderStatus; at: string }[];
+  recipient: { name: string; phone: string; area: string };
+  items: Omit<OrderItemDTO, "productId">[];
+  subtotal: number;
+  shippingFee: number;
+  total: number;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  createdAt: string;
+};
 
 export type OrderItemDTO = {
   productId: string;

@@ -227,6 +227,27 @@ html:not(.hero-seen) [data-hero="streak"] {
   }
 }
 
+/* Order lookup track: the car drives from the start to the current status when it appears. */
+.track-fill {
+  animation: track-fill 1.4s var(--ease-out-expo) 0.2s both;
+}
+.track-car {
+  animation: track-car 1.4s var(--ease-out-expo) 0.2s both;
+}
+.track-car .car-wheel {
+  animation-iteration-count: 4;
+}
+@keyframes track-fill {
+  from {
+    width: 0;
+  }
+}
+@keyframes track-car {
+  from {
+    left: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

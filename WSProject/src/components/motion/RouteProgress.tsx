@@ -46,8 +46,10 @@ export function RouteProgress() {
       start();
     };
     const onSubmit = (e: SubmitEvent) => {
+      // Only forms that navigate (next/form renders action="/products"). Server Action forms have no
+      // path action and stay on the page, so they must not start the bar.
       const form = e.target as HTMLFormElement;
-      if (form.method.toLowerCase() === "get") start();
+      if (form.method.toLowerCase() === "get" && form.getAttribute("action")?.startsWith("/")) start();
     };
 
     document.addEventListener("click", onClick, true);

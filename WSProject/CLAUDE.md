@@ -181,6 +181,14 @@ Env được validate trong `src/server/env.ts`. Thêm biến mới thì cập n
 
 <!-- Mới nhất ở trên. Mỗi phiên 2–4 dòng: đã làm gì, còn dở gì. -->
 
+- **2026-11-27:** Tra cứu đơn `/order-lookup` (noindex):
+  - Mã đơn + SĐT (`+84…` và `0…` coi là một). Sai mã hay sai SĐT đều cùng một câu "Không tìm thấy" để không dò được mã. Giới hạn 10 lần / 15 phút / IP (bộ đếm trong bộ nhớ, khởi động lại server là reset). SĐT không lên URL (Server Action trả kết quả).
+  - Kết quả (`OrderLookupDTO`, `src/server/services/orders.ts`) che bớt người nhận: tên, SĐT `090****567`, chỉ phường + tỉnh. Tiến trình dạng đường đua (`OrderTrack`): xe chạy tới trạng thái hiện tại; đơn hủy thì xe dừng ở bước cuối đã qua, vạch xám.
+  - Order có thêm `statusHistory` (thời điểm từng trạng thái); **admin đổi trạng thái sau này phải push vào đây**. Ngày giờ hiển thị qua `formatOrderTime` (giờ VN).
+  - Seed thêm 5 đơn mẫu `WS-DEMO-01..05` (mỗi trạng thái một đơn, SĐT `0901234567`), chỉ thêm khi chưa có.
+  - Sửa `RouteProgress`: chỉ bắt form có `action` là đường dẫn (next/form); form Server Action trước đó làm thanh tải chạy 10 giây và mờ trang.
+  - E2E lookup 23/23, chi tiết 34/34, cart 24/24, danh sách 47/48 (cảnh báo do Playwright).
+
 - **2026-11-27:** Tải trang có xe chạy (chủ dự án chọn 1+2+3 sau bản xem thử, **bỏ intro chặn màn hình** vì làm chậm khách và điểm SEO):
   - `RouteProgress` (`src/components/motion/`): vạch đỏ mép trên có xe 1:64 (`MiniCar`) ở đầu vạch. App Router không có sự kiện bắt đầu chuyển trang nên bắt click link nội bộ + submit form GET, xong khi pathname/query đổi; chỉ hiện nếu chờ quá 120ms, tự tắt sau 10s. Trong lúc chờ `<main>` mờ đi (`html[data-navigating]`).
   - Hero trang chủ "vào cua" chỉ lần ghé đầu mỗi phiên: script `beforeInteractive` trong root layout (`src/lib/hero-seen.ts`) thêm `html.hero-seen` nếu sessionStorage đã đánh dấu; `<html>` có `suppressHydrationWarning`. Tiêu đề hiện từng dòng (có padding để dấu tiếng Việt không bị cắt), khung ảnh trượt vào + vệt sáng.
